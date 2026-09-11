@@ -14,7 +14,12 @@ from otp.gui.trip_model import (
     TripItem, TripState, STATE_LABELS, STATE_ACTIONS,
     compute_state, trip_fromRoadStar_dispatch, _format_time, _format_delta,
 )
-from otp.gui.icons import state_color
+
+try:
+    from otp.gui.icons import state_color
+    HAS_PYSIDE = True
+except ImportError:
+    HAS_PYSIDE = False
 
 
 def test_state_computation_acknowledged():
@@ -83,6 +88,7 @@ def test_trip_from_dispatch_raw_roadstar():
     assert t.driver_id == "1881"
     assert t.delta_minutes == 10
 
+@pytest.mark.skipif(not HAS_PYSIDE, reason="PySide6 not installed")
 def test_state_color_values():
     assert state_color("CRITICAL") == "#da3633"
     assert state_color("RESOLVED") == "#3fb950"
