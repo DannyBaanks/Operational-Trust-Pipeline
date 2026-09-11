@@ -5,6 +5,10 @@ OTP Evidence Viewer Generator
 Reads OTP evidence receipt JSON files and produces a self-contained
 HTML viewer with Windows XP aesthetic. Works offline from file:// protocol.
 
+RULE: UI = projection(receipt). All visible fields rendered from embedded
+JSON via JavaScript. Zero static placeholders. The thing you see and the
+thing you verify are literally the same artifact.
+
 Usage:
     py tools/build_evidence_viewer.py evidence/receipt.json
     py tools/build_evidence_viewer.py evidence/receipt.json -o viewer.html
@@ -118,32 +122,26 @@ body {
     position: relative;
     top: 1px;
 }
+.tab:hover { background: #C8C4BC; }
 .tab.active {
     background: #ECE9D8;
-    border-bottom: 1px solid #ECE9D8;
     font-weight: bold;
-}
-.tab:hover:not(.active) {
-    background: #C8C4BC;
+    border-bottom: 1px solid #ECE9D8;
 }
 
 /* Tab content */
-.tab-content {
-    display: none;
-    padding: 8px;
-}
-.tab-content.active {
-    display: block;
-}
+.tab-content { display: none; padding: 8px; }
+.tab-content.active { display: block; }
 
-/* Group box */
+/* Group boxes */
 .group-box {
     border: 1px solid #ACA899;
     margin: 8px 0;
-    padding: 12px 8px 8px 8px;
+    padding: 8px;
+    background: #FFF;
     position: relative;
 }
-.group-box .label {
+.group-box > .label {
     background: #ECE9D8;
     padding: 0 4px;
     position: absolute;
@@ -157,12 +155,12 @@ body {
 .field {
     display: flex;
     margin: 3px 0;
+    gap: 8px;
     align-items: flex-start;
 }
 .field-label {
-    width: 140px;
     font-weight: bold;
-    color: #003399;
+    min-width: 140px;
     flex-shrink: 0;
 }
 .field-value {
@@ -170,34 +168,24 @@ body {
     word-break: break-all;
 }
 .field-value code {
-    background: #FFF;
-    border: 1px inset #D4D0C8;
-    padding: 1px 4px;
     font-family: "Lucida Console", "Courier New", monospace;
+    background: #F5F5DC;
+    padding: 1px 3px;
+    border: 1px inset #D4D0C8;
     font-size: 10px;
 }
 
-/* Verdict badge */
-.verdict {
-    display: inline-block;
-    padding: 2px 8px;
-    font-weight: bold;
-    border: 2px outset;
-    font-size: 12px;
-}
-.verdict-ACTION_REQUESTED { background: #FF6B6B; color: #000; border-color: #FF8888; }
-.verdict-NO_ACTION { background: #90EE90; color: #000; border-color: #98FB98; }
-.verdict-BLOCKED { background: #FFB347; color: #000; border-color: #FFC87C; }
-.verdict-NEEDS_REVIEW { background: #FFD700; color: #000; border-color: #FFE44D; }
-.verdict-NOT_DEMONSTRATED { background: #D3D3D3; color: #000; border-color: #DCDCDC; }
-
-/* Finding status */
-.status-PASS { color: #008000; font-weight: bold; }
+/* Status colors */
 .status-FAIL { color: #CC0000; font-weight: bold; }
-.status-UNKNOWN { color: #666; font-style: italic; }
+.status-PASS { color: #006400; font-weight: bold; }
+.status-ERROR { color: #CC0000; font-weight: bold; }
+.status-WARN { color: #FF8C00; font-weight: bold; }
 
-/* Severity */
+/* Severity colors */
+.severity-CRITICAL { color: #CC0000; font-weight: bold; }
 .severity-HIGH { color: #CC0000; font-weight: bold; }
+.severity-MEDIUM { color: #FF8C00; }
+.severity-LOW { color: #0066CC; }
 .severity-INFO { color: #0066CC; }
 
 /* Component cards */
@@ -216,19 +204,13 @@ body {
     align-items: center;
     gap: 8px;
 }
-.component-header:hover {
-    background: #D8D4CC;
-}
-.component-header .arrow {
-    font-size: 8px;
-}
+.component-header:hover { background: #D8D4CC; }
+.component-header .arrow { font-size: 8px; }
 .component-body {
     padding: 8px;
     display: none;
 }
-.component-body.open {
-    display: block;
-}
+.component-body.open { display: block; }
 .component-body pre {
     background: #FFF;
     border: 1px inset #D4D0C8;
@@ -261,12 +243,8 @@ body {
     font-size: 11px;
     cursor: pointer;
 }
-.verify-btn:hover {
-    background: #C8C4BC;
-}
-.verify-btn:active {
-    border-style: inset;
-}
+.verify-btn:hover { background: #C8C4BC; }
+.verify-btn:active { border-style: inset; }
 
 /* Verification result */
 .verify-result {
@@ -298,17 +276,19 @@ body {
     margin-bottom: 4px;
 }
 
-/* Ledger chain */
-.ledger-chain {
-    font-family: "Lucida Console", "Courier New", monospace;
-    font-size: 9px;
-    background: #1E1E1E;
-    color: #0F0;
-    padding: 8px;
-    border: 2px inset #444;
-    overflow-x: auto;
-    white-space: pre;
+/* Phase badge */
+.phase-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid #ACA899;
+    background: #E8E4DC;
+    font-size: 10px;
+    margin-left: 8px;
 }
+.phase-badge.RESOLVED { background: #90EE90; color: #006400; }
+.phase-badge.OPEN { background: #FFE0B2; color: #E65100; }
+.phase-badge.SATISFIED { background: #90EE90; color: #006400; }
+.phase-badge.EXPIRED { background: #FFB3B3; color: #8B0000; }
 
 /* XP-style scrollbar */
 ::-webkit-scrollbar { width: 16px; height: 16px; }
@@ -330,7 +310,7 @@ body {
 <!-- Title Bar -->
 <div class="title-bar">
     <span class="icon">📋</span>
-    <span class="title">OTP Evidence Viewer - $execution_id</span>
+    <span class="title">OTP Evidence Viewer — <span id="v-execution-id"></span></span>
     <span class="close" onclick="window.close()">X</span>
 </div>
 
@@ -341,7 +321,6 @@ body {
     <span class="menu-item" onclick="verifyReceipt()">🔍 Verify</span>
     <span class="menu-item" onclick="downloadEvidence()">💾 Save As...</span>
     <span class="menu-item" onclick="copyHash()">📋 Copy Hash</span>
-    <span class="menu-item" onclick="toggleTheme()">🌙 Theme</span>
 </div>
 
 <!-- Tabs -->
@@ -360,26 +339,23 @@ body {
         <span class="label">Execution</span>
         <div class="field">
             <span class="field-label">Execution ID:</span>
-            <span class="field-value"><code>$execution_id</code></span>
+            <span class="field-value"><code id="v-exec-id"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Source Adapter:</span>
-            <span class="field-value">$source_adapter</span>
+            <span class="field-value" id="v-source-adapter"></span>
         </div>
         <div class="field">
             <span class="field-label">Policy Version:</span>
-            <span class="field-value">$policy_version</span>
+            <span class="field-value" id="v-policy-version"></span>
         </div>
         <div class="field">
             <span class="field-label">Channel Adapter:</span>
-            <span class="field-value">$channel_adapter</span>
+            <span class="field-value" id="v-channel"></span>
         </div>
-    </div>
-
-    <div class="group-box">
-        <span class="label">Verdict</span>
-        <div style="text-align: center; padding: 8px;">
-            <span class="verdict verdict-$verdict">$verdict</span>
+        <div class="field">
+            <span class="field-label">Verdict:</span>
+            <span class="field-value" id="v-verdict"></span>
         </div>
     </div>
 
@@ -387,23 +363,19 @@ body {
         <span class="label">Finding</span>
         <div class="field">
             <span class="field-label">Status:</span>
-            <span class="field-value status-$finding_status">$finding_status</span>
+            <span class="field-value" id="v-finding-status"></span>
         </div>
         <div class="field">
             <span class="field-label">Reason Code:</span>
-            <span class="field-value"><code>$finding_reason_code</code></span>
+            <span class="field-value"><code id="v-finding-reason-code"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Severity:</span>
-            <span class="field-value severity-$finding_severity">$finding_severity</span>
+            <span class="field-value" id="v-finding-severity"></span>
         </div>
         <div class="field">
             <span class="field-label">Action Recommended:</span>
-            <span class="field-value">$finding_action_recommended</span>
-        </div>
-        <div class="field">
-            <span class="field-label">Description:</span>
-            <span class="field-value">$finding_reason</span>
+            <span class="field-value" id="v-finding-action-rec"></span>
         </div>
     </div>
 
@@ -411,11 +383,11 @@ body {
         <span class="label">Receipt Integrity</span>
         <div class="field">
             <span class="field-label">Receipt SHA-256:</span>
-            <span class="field-value"><span class="sha256" id="receipt-hash">$receipt_sha256</span></span>
+            <span class="field-value"><span class="sha256" id="receipt-hash"></span></span>
         </div>
         <div class="field">
             <span class="field-label">Previous Receipt:</span>
-            <span class="field-value"><span class="sha256">$previous_receipt_sha256</span></span>
+            <span class="field-value"><span class="sha256" id="v-prev-receipt"></span></span>
         </div>
         <div style="margin-top: 8px; text-align: center;">
             <button class="verify-btn" onclick="verifyReceipt()">🔍 Verify Integrity</button>
@@ -438,41 +410,41 @@ body {
         <span class="label">Operational Event</span>
         <div class="field">
             <span class="field-label">Event ID:</span>
-            <span class="field-value"><code>$event_id</code></span>
+            <span class="field-value"><code id="v-event-id"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Source:</span>
-            <span class="field-value">$event_source</span>
+            <span class="field-value" id="v-event-source"></span>
         </div>
         <div class="field">
             <span class="field-label">Event Type:</span>
-            <span class="field-value">$event_source_event_type</span>
+            <span class="field-value" id="v-event-type"></span>
         </div>
         <div class="field">
             <span class="field-label">Source Ref:</span>
-            <span class="field-value"><code>$event_source_ref</code></span>
+            <span class="field-value"><code id="v-event-source-ref"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Entity Type:</span>
-            <span class="field-value">$event_entity_type</span>
+            <span class="field-value" id="v-event-entity-type"></span>
         </div>
         <div class="field">
             <span class="field-label">Entity ID:</span>
-            <span class="field-value"><code>$event_entity_id</code></span>
+            <span class="field-value"><code id="v-event-entity-id"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Observed At:</span>
-            <span class="field-value">$event_observed_at</span>
+            <span class="field-value" id="v-event-observed-at"></span>
         </div>
         <div class="field">
             <span class="field-label">Payload SHA-256:</span>
-            <span class="field-value"><span class="sha256">$event_payload_sha256</span></span>
+            <span class="field-value"><span class="sha256" id="v-event-payload-sha"></span></span>
         </div>
     </div>
 
     <div class="group-box">
         <span class="label">Payload</span>
-        <pre>$event_payload_pretty</pre>
+        <pre id="v-event-payload"></pre>
     </div>
 </div>
 
@@ -482,39 +454,39 @@ body {
         <span class="label">Finding Details</span>
         <div class="field">
             <span class="field-label">Finding ID:</span>
-            <span class="field-value"><code>$finding_id</code></span>
+            <span class="field-value"><code id="v-finding-id"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Rule ID:</span>
-            <span class="field-value">$finding_rule_id</span>
+            <span class="field-value" id="v-finding-rule-id"></span>
         </div>
         <div class="field">
             <span class="field-label">Status:</span>
-            <span class="field-value status-$finding_status">$finding_status</span>
+            <span class="field-value" id="v-finding-status2"></span>
         </div>
         <div class="field">
             <span class="field-label">Severity:</span>
-            <span class="field-value severity-$finding_severity">$finding_severity</span>
+            <span class="field-value" id="v-finding-severity2"></span>
         </div>
         <div class="field">
             <span class="field-label">Subject:</span>
-            <span class="field-value"><code>$finding_subject_ref</code></span>
+            <span class="field-value"><code id="v-finding-subject"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Reason Code:</span>
-            <span class="field-value"><code>$finding_reason_code</code></span>
+            <span class="field-value"><code id="v-finding-reason-code2"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Reason:</span>
-            <span class="field-value">$finding_reason</span>
+            <span class="field-value" id="v-finding-reason"></span>
         </div>
         <div class="field">
             <span class="field-label">Action Recommended:</span>
-            <span class="field-value">$finding_action_recommended</span>
+            <span class="field-value" id="v-finding-action-rec2"></span>
         </div>
         <div class="field">
             <span class="field-label">Evidence Refs:</span>
-            <span class="field-value"><code>$finding_evidence_refs</code></span>
+            <span class="field-value"><code id="v-finding-evidence-refs"></code></span>
         </div>
     </div>
 
@@ -522,7 +494,7 @@ body {
         <span class="label">Component SHA-256</span>
         <div class="field">
             <span class="field-label">Finding Hash:</span>
-            <span class="field-value"><span class="sha256">$sha256_finding</span></span>
+            <span class="field-value"><span class="sha256" id="v-sha-finding"></span></span>
         </div>
     </div>
 </div>
@@ -533,35 +505,35 @@ body {
         <span class="label">Action Request</span>
         <div class="field">
             <span class="field-label">Action ID:</span>
-            <span class="field-value"><code>$action_id</code></span>
+            <span class="field-value"><code id="v-action-id"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Type:</span>
-            <span class="field-value">$action_type</span>
+            <span class="field-value" id="v-action-type"></span>
         </div>
         <div class="field">
             <span class="field-label">Target:</span>
-            <span class="field-value"><code>$action_target_ref</code></span>
+            <span class="field-value"><code id="v-action-target"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Channel:</span>
-            <span class="field-value">$action_channel</span>
+            <span class="field-value" id="v-action-channel"></span>
         </div>
         <div class="field">
             <span class="field-label">Urgency:</span>
-            <span class="field-value">$action_urgency</span>
+            <span class="field-value" id="v-action-urgency"></span>
         </div>
         <div class="field">
             <span class="field-label">Objective:</span>
-            <span class="field-value">$action_objective</span>
+            <span class="field-value" id="v-action-objective"></span>
         </div>
         <div class="field">
             <span class="field-label">Message:</span>
-            <span class="field-value">$action_message</span>
+            <span class="field-value" id="v-action-message"></span>
         </div>
         <div class="field">
             <span class="field-label">Require ACK:</span>
-            <span class="field-value">$action_require_ack</span>
+            <span class="field-value" id="v-action-require-ack"></span>
         </div>
     </div>
 
@@ -569,43 +541,43 @@ body {
         <span class="label">Action Result</span>
         <div class="field">
             <span class="field-label">Provider:</span>
-            <span class="field-value">$result_provider</span>
+            <span class="field-value" id="v-result-provider"></span>
         </div>
         <div class="field">
             <span class="field-label">Provider Ref:</span>
-            <span class="field-value"><code>$result_provider_ref</code></span>
+            <span class="field-value"><code id="v-result-provider-ref"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Status:</span>
-            <span class="field-value">$result_status</span>
+            <span class="field-value" id="v-result-status"></span>
         </div>
         <div class="field">
             <span class="field-label">Acknowledged:</span>
-            <span class="field-value">$result_acknowledged</span>
+            <span class="field-value" id="v-result-acknowledged"></span>
         </div>
         <div class="field">
             <span class="field-label">Delivery:</span>
-            <span class="field-value">$result_delivery</span>
+            <span class="field-value" id="v-result-delivery"></span>
         </div>
         <div class="field">
             <span class="field-label">Reached Ringing:</span>
-            <span class="field-value">$result_reached_ringing</span>
+            <span class="field-value" id="v-result-reached-ringing"></span>
         </div>
         <div class="field">
             <span class="field-label">Terminal Cause:</span>
-            <span class="field-value">$result_terminal_cause</span>
+            <span class="field-value" id="v-result-terminal-cause"></span>
         </div>
         <div class="field">
             <span class="field-label">Started At:</span>
-            <span class="field-value">$result_started_at</span>
+            <span class="field-value" id="v-result-started-at"></span>
         </div>
         <div class="field">
             <span class="field-label">Completed At:</span>
-            <span class="field-value">$result_completed_at</span>
+            <span class="field-value" id="v-result-completed-at"></span>
         </div>
         <div class="field">
             <span class="field-label">Response:</span>
-            <span class="field-value">$result_response</span>
+            <span class="field-value" id="v-result-response"></span>
         </div>
     </div>
 
@@ -613,11 +585,11 @@ body {
         <span class="label">Component SHA-256</span>
         <div class="field">
             <span class="field-label">Action Hash:</span>
-            <span class="field-value"><span class="sha256">$sha256_action</span></span>
+            <span class="field-value"><span class="sha256" id="v-sha-action"></span></span>
         </div>
         <div class="field">
             <span class="field-label">Result Hash:</span>
-            <span class="field-value"><span class="sha256">$sha256_result</span></span>
+            <span class="field-value"><span class="sha256" id="v-sha-result"></span></span>
         </div>
     </div>
 </div>
@@ -628,10 +600,10 @@ body {
         <div class="component-header" onclick="toggleComponent('comp-event')">
             <span class="arrow" id="arrow-comp-event">▶</span>
             Event Component
-            <span class="sha256" style="margin-left: auto;">$sha256_event</span>
+            <span class="sha256" style="margin-left: auto;" id="v-comp-sha-event"></span>
         </div>
         <div class="component-body" id="comp-event">
-            <pre>$event_json_pretty</pre>
+            <pre id="v-comp-json-event"></pre>
         </div>
     </div>
 
@@ -639,10 +611,10 @@ body {
         <div class="component-header" onclick="toggleComponent('comp-lease')">
             <span class="arrow" id="arrow-comp-lease">▶</span>
             Lease Component
-            <span class="sha256" style="margin-left: auto;">$sha256_lease</span>
+            <span class="sha256" style="margin-left: auto;" id="v-comp-sha-lease"></span>
         </div>
         <div class="component-body" id="comp-lease">
-            <pre>$lease_json_pretty</pre>
+            <pre id="v-comp-json-lease"></pre>
         </div>
     </div>
 
@@ -650,10 +622,10 @@ body {
         <div class="component-header" onclick="toggleComponent('comp-finding')">
             <span class="arrow" id="arrow-comp-finding">▶</span>
             Finding Component
-            <span class="sha256" style="margin-left: auto;">$sha256_finding</span>
+            <span class="sha256" style="margin-left: auto;" id="v-comp-sha-finding"></span>
         </div>
         <div class="component-body" id="comp-finding">
-            <pre>$finding_json_pretty</pre>
+            <pre id="v-comp-json-finding"></pre>
         </div>
     </div>
 
@@ -661,10 +633,10 @@ body {
         <div class="component-header" onclick="toggleComponent('comp-action')">
             <span class="arrow" id="arrow-comp-action">▶</span>
             Action Component
-            <span class="sha256" style="margin-left: auto;">$sha256_action</span>
+            <span class="sha256" style="margin-left: auto;" id="v-comp-sha-action"></span>
         </div>
         <div class="component-body" id="comp-action">
-            <pre>$action_json_pretty</pre>
+            <pre id="v-comp-json-action"></pre>
         </div>
     </div>
 
@@ -672,10 +644,10 @@ body {
         <div class="component-header" onclick="toggleComponent('comp-result')">
             <span class="arrow" id="arrow-comp-result">▶</span>
             Result Component
-            <span class="sha256" style="margin-left: auto;">$sha256_result</span>
+            <span class="sha256" style="margin-left: auto;" id="v-comp-sha-result"></span>
         </div>
         <div class="component-body" id="comp-result">
-            <pre>$result_json_pretty</pre>
+            <pre id="v-comp-json-result"></pre>
         </div>
     </div>
 </div>
@@ -684,14 +656,14 @@ body {
 <div id="tab-raw" class="tab-content">
     <div class="group-box">
         <span class="label">Full Evidence Receipt (JSON)</span>
-        <pre style="max-height: 500px; overflow-y: auto;">$receipt_json_pretty</pre>
+        <pre style="max-height: 500px; overflow-y: auto;" id="v-raw-json"></pre>
     </div>
 </div>
 
 <!-- Status Bar -->
 <div class="status-bar">
-    <span class="section">Schema: evidence-receipt/1</span>
-    <span class="section">Components: 5</span>
+    <span class="section">Schema: <span id="v-schema"></span></span>
+    <span class="section">Components: <span id="v-component-count"></span></span>
     <span class="section" id="status-verify">Ready</span>
 </div>
 
@@ -702,7 +674,7 @@ body {
 
 <script>
 // ============================================================
-// OTP EVIDENCE VIEWER — VERIFICATION LOGIC
+// OTP EVIDENCE VIEWER — UI = projection(receipt)
 // ============================================================
 
 const originalRecord = JSON.parse(document.getElementById('otp-evidence').textContent);
@@ -729,6 +701,175 @@ async function sha256(value) {
     return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Safe getters
+function g(obj, ...keys) {
+    let cur = obj;
+    for (const k of keys) {
+        if (cur == null || typeof cur !== 'object') return undefined;
+        cur = cur[k];
+    }
+    return cur;
+}
+
+function fmt(val) {
+    if (val === undefined || val === null) return '—';
+    if (typeof val === 'boolean') return val ? 'Yes' : 'No';
+    return String(val);
+}
+
+function fmtClass(val, prefix) {
+    const s = String(val || 'NONE').replace(/[^A-Z0-9_]/gi, '-').toUpperCase();
+    return prefix + s;
+}
+
+// Render all visible fields from the receipt JSON
+function renderFields() {
+    const r = currentRecord;
+    const c = r.components || {};
+
+    // Title bar
+    document.getElementById('v-execution-id').textContent = fmt(r.execution_id);
+
+    // Overview
+    document.getElementById('v-exec-id').textContent = fmt(r.execution_id);
+    document.getElementById('v-source-adapter').textContent = fmt(r.source_adapter);
+    document.getElementById('v-policy-version').textContent = fmt(r.policy_version);
+    document.getElementById('v-channel').textContent = fmt(r.channel_adapter);
+
+    // Verdict
+    const verdict = r.verdict || g(c, 'finding', 'status') || 'UNKNOWN';
+    const vEl = document.getElementById('v-verdict');
+    vEl.textContent = fmt(verdict);
+    vEl.className = 'field-value status-' + String(verdict).replace(/[^A-Z0-9]/gi, '-').toUpperCase();
+
+    // Finding overview
+    const f = c.finding || {};
+    const fStatus = f.status;
+    const fsEl = document.getElementById('v-finding-status');
+    fsEl.textContent = fmt(fStatus);
+    fsEl.className = 'field-value ' + fmtClass(fStatus, 'status-');
+
+    document.getElementById('v-finding-reason-code').textContent = fmt(f.reason_code);
+
+    const fSev = f.severity;
+    const fvEl = document.getElementById('v-finding-severity');
+    fvEl.textContent = fmt(fSev);
+    fvEl.className = 'field-value ' + fmtClass(fSev, 'severity-');
+
+    document.getElementById('v-finding-action-rec').textContent = fmt(f.action_recommended);
+
+    // Receipt hashes
+    document.getElementById('receipt-hash').textContent = fmt(r.receipt_sha256);
+    document.getElementById('v-prev-receipt').textContent = fmt(r.previous_receipt_sha256);
+
+    // Event tab
+    const ev = c.event || {};
+    document.getElementById('v-event-id').textContent = fmt(ev.event_id);
+    document.getElementById('v-event-source').textContent = fmt(ev.source);
+    document.getElementById('v-event-type').textContent = fmt(ev.source_event_type);
+    document.getElementById('v-event-source-ref').textContent = fmt(ev.source_ref);
+    document.getElementById('v-event-entity-type').textContent = fmt(ev.entity_type);
+    document.getElementById('v-event-entity-id').textContent = fmt(ev.entity_id);
+    document.getElementById('v-event-observed-at').textContent = fmt(ev.observed_at);
+    document.getElementById('v-event-payload-sha').textContent = fmt(ev.payload_sha256);
+
+    const payload = ev.payload;
+    document.getElementById('v-event-payload').textContent =
+        payload ? JSON.stringify(payload, null, 2) : '—';
+
+    // Finding tab (detail)
+    document.getElementById('v-finding-id').textContent = fmt(f.finding_id);
+    document.getElementById('v-finding-rule-id').textContent = fmt(f.rule_id);
+
+    const fs2El = document.getElementById('v-finding-status2');
+    fs2El.textContent = fmt(fStatus);
+    fs2El.className = 'field-value ' + fmtClass(fStatus, 'status-');
+
+    const fs2vEl = document.getElementById('v-finding-severity2');
+    fs2vEl.textContent = fmt(fSev);
+    fs2vEl.className = 'field-value ' + fmtClass(fSev, 'severity-');
+
+    document.getElementById('v-finding-subject').textContent = fmt(f.subject_ref);
+    document.getElementById('v-finding-reason-code2').textContent = fmt(f.reason_code);
+    document.getElementById('v-finding-reason').textContent = fmt(f.reason);
+    document.getElementById('v-finding-action-rec2').textContent = fmt(f.action_recommended);
+    document.getElementById('v-finding-evidence-refs').textContent =
+        fmt(f.evidence_refs);
+
+    // Action tab
+    const act = c.action || {};
+    document.getElementById('v-action-id').textContent = fmt(act.action_id);
+    document.getElementById('v-action-type').textContent = fmt(act.action_type);
+    document.getElementById('v-action-target').textContent = fmt(act.target_ref);
+    document.getElementById('v-action-channel').textContent = fmt(act.channel);
+    document.getElementById('v-action-urgency').textContent = fmt(act.urgency);
+    document.getElementById('v-action-objective').textContent = fmt(act.objective);
+    document.getElementById('v-action-message').textContent = fmt(act.message);
+    document.getElementById('v-action-require-ack').textContent = fmt(act.require_ack);
+
+    // Result tab
+    const res = c.result || {};
+    document.getElementById('v-result-provider').textContent = fmt(res.provider);
+    document.getElementById('v-result-provider-ref').textContent = fmt(res.provider_ref);
+    document.getElementById('v-result-status').textContent = fmt(res.status);
+    document.getElementById('v-result-acknowledged').textContent = fmt(res.acknowledged);
+    document.getElementById('v-result-delivery').textContent = fmt(res.delivery);
+    document.getElementById('v-result-reached-ringing').textContent = fmt(res.reached_ringing);
+    document.getElementById('v-result-terminal-cause').textContent = fmt(res.terminal_cause);
+    document.getElementById('v-result-started-at').textContent = fmt(res.started_at);
+    document.getElementById('v-result-completed-at').textContent = fmt(res.completed_at);
+    document.getElementById('v-result-response').textContent = fmt(res.response);
+
+    // Component hashes
+    const ch = r.component_hashes || {};
+    document.getElementById('v-sha-finding').textContent = fmt(ch.finding);
+    document.getElementById('v-sha-action').textContent = fmt(ch.action);
+    document.getElementById('v-sha-result').textContent = fmt(ch.result);
+
+    // Components tab — raw JSON per component
+    const compMap = [
+        ['event', 'event'],
+        ['lease', 'lease'],
+        ['finding', 'finding'],
+        ['action', 'action'],
+        ['result', 'result'],
+    ];
+    compMap.forEach(([key, jsonKey]) => {
+        const el = document.getElementById('v-comp-json-' + key);
+        const sha = document.getElementById('v-comp-sha-' + key);
+        const data = c[jsonKey];
+        const hash = ch[jsonKey];
+        el.textContent = data ? JSON.stringify(data, null, 2) : '—';
+        sha.textContent = fmt(hash);
+    });
+
+    // Raw JSON tab
+    document.getElementById('v-raw-json').textContent = JSON.stringify(r, null, 2);
+
+    // Status bar
+    document.getElementById('v-schema').textContent = fmt(r.schema_version);
+    const compCount = Object.keys(ch).length;
+    document.getElementById('v-component-count').textContent = compCount || '—';
+}
+
+// Tab switching
+function switchTab(name) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.querySelectorAll('.tab').forEach(el => {
+        if (el.textContent.toLowerCase() === name) el.classList.add('active');
+    });
+}
+
+// Component toggle
+function toggleComponent(id) {
+    const body = document.getElementById(id);
+    const arrow = document.getElementById('arrow-' + id);
+    body.classList.toggle('open');
+    arrow.textContent = body.classList.contains('open') ? '▼' : '▶';
+}
+
 // Verify receipt integrity
 async function verifyReceipt() {
     const resultEl = document.getElementById('verify-result');
@@ -747,283 +888,168 @@ async function verifyReceipt() {
         const computed = await sha256(body);
         const valid = computed === currentRecord.receipt_sha256;
 
-        // Verify component hashes
-        const components = currentRecord.components || {};
-        const compHashes = currentRecord.component_sha256 || {};
-        const componentResults = {};
-
-        for (const [name, comp] of Object.entries(components)) {
-            const expected = compHashes[name];
-            if (expected && comp) {
-                const actual = await sha256(comp);
-                componentResults[name] = { valid: actual === expected, expected, actual };
+        // Compute component hashes from components object
+        const comps = currentRecord.components || {};
+        const ch = currentRecord.component_hashes || {};
+        const compResults = [];
+        for (const [key, data] of Object.entries(comps)) {
+            if (data && typeof data === 'object') {
+                const hash = await sha256(data);
+                const expected = ch[key];
+                compResults.push({
+                    name: key,
+                    hash: hash,
+                    expected: expected,
+                    match: expected ? hash === expected : null,
+                });
             }
         }
 
-        const allComponentsValid = Object.values(componentResults).every(r => r.valid);
-
-        if (valid && allComponentsValid) {
-            resultEl.className = 'verify-result verify-valid';
-            resultEl.innerHTML = `
-                <div style="font-size: 14px; margin-bottom: 8px;">✅ RECEIPT VALID</div>
-                <div>Receipt SHA-256: <span class="sha256">${computed}</span></div>
-                <div style="margin-top: 4px;">All ${Object.keys(componentResults).length} component hashes verified.</div>
-            `;
-            statusEl.textContent = '✅ VALID — All hashes match';
-        } else {
-            let html = '<div style="font-size: 14px; margin-bottom: 8px;">❌ VERIFICATION FAILED</div>';
-
-            if (!valid) {
-                html += `<div>Receipt hash mismatch:<br>`;
-                html += `Expected: <span class="sha256">${currentRecord.receipt_sha256}</span><br>`;
-                html += `Computed: <span class="sha256">${computed}</span></div>`;
-            }
-
-            for (const [name, result] of Object.entries(componentResults)) {
-                if (!result.valid) {
-                    html += `<div style="margin-top: 4px;">Component "${name}" hash mismatch:<br>`;
-                    html += `Expected: <span class="sha256">${result.expected}</span><br>`;
-                    html += `Computed: <span class="sha256">${result.actual}</span></div>`;
+        // Also verify ledger if present
+        let ledgerValid = null;
+        if (currentRecord.ledger && currentRecord.ledger.length > 0) {
+            let chainValid = true;
+            for (let i = 1; i < currentRecord.ledger.length; i++) {
+                if (currentRecord.ledger[i].previous_receipt_sha256 !==
+                    currentRecord.ledger[i-1].receipt_sha256) {
+                    chainValid = false;
+                    break;
                 }
             }
-
-            resultEl.className = 'verify-result verify-invalid';
-            resultEl.innerHTML = html;
-            statusEl.textContent = '❌ INVALID — Hash mismatch';
+            ledgerValid = chainValid;
         }
-    } catch (e) {
+
+        let html = '<div style="margin-bottom: 8px;">';
+        html += '<strong>Receipt hash: </strong>';
+        if (valid) {
+            html += '<span style="color: #006400;">VALID</span>';
+            html += ' — ' + computed.substring(0, 32) + '...';
+        } else {
+            html += '<span style="color: #8B0000;">INVALID</span>';
+            html += '<br>Computed: ' + computed;
+            html += '<br>Expected: ' + currentRecord.receipt_sha256;
+        }
+        html += '</div>';
+
+        html += '<div style="margin-bottom: 8px;"><strong>Components:</strong></div>';
+        html += '<table style="border-collapse: collapse; width: 100%;">';
+        compResults.forEach(r => {
+            const color = r.match === true ? '#006400' :
+                         r.match === false ? '#8B0000' : '#666';
+            const label = r.match === true ? 'MATCH' :
+                         r.match === false ? 'MISMATCH' : 'NO EXPECTED';
+            html += '<tr style="border-bottom: 1px solid #DDD;">';
+            html += '<td style="padding: 2px 8px;">' + r.name + '</td>';
+            html += '<td style="padding: 2px 8px; font-family: monospace; font-size: 9px;">' +
+                    r.hash.substring(0, 32) + '...</td>';
+            html += '<td style="padding: 2px 8px; color: ' + color + '; font-weight: bold;">' +
+                    label + '</td>';
+            html += '</tr>';
+        });
+        html += '</table>';
+
+        if (ledgerValid !== null) {
+            html += '<div style="margin-top: 8px;">';
+            html += '<strong>Ledger chain: </strong>';
+            html += ledgerValid ?
+                '<span style="color: #006400;">VALID</span> — all links intact' :
+                '<span style="color: #8B0000;">BROKEN</span> — chain discontinuity detected';
+            html += '</div>';
+        }
+
+        resultEl.innerHTML = html;
+        resultEl.className = 'verify-result ' + (valid ? 'verify-valid' : 'verify-invalid');
+        statusEl.textContent = valid ? 'VALID — All hashes match' : 'INVALID — Hash mismatch';
+
+    } catch (err) {
+        resultEl.innerHTML = '<span style="color: #8B0000;">ERROR: ' + err.message + '</span>';
         resultEl.className = 'verify-result verify-invalid';
-        resultEl.innerHTML = `<div>❌ ERROR: ${e.message}</div>`;
-        statusEl.textContent = '❌ ERROR';
+        statusEl.textContent = 'Error: ' + err.message;
     }
 }
 
-// Tab switching
-function switchTab(name) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
-    document.getElementById('tab-' + name).classList.add('active');
-}
-
-// Component expand/collapse
-function toggleComponent(id) {
-    const el = document.getElementById(id);
-    const arrow = document.getElementById('arrow-' + id);
-    el.classList.toggle('open');
-    arrow.textContent = el.classList.contains('open') ? '▼' : '▶';
-}
-
-// Download evidence
+// Download evidence as JSON
 function downloadEvidence() {
     const blob = new Blob([JSON.stringify(currentRecord, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = currentRecord.execution_id + '.json';
+    a.download = (currentRecord.execution_id || 'evidence') + '.json';
     a.click();
     URL.revokeObjectURL(url);
 }
 
-// Copy hash
-function copyHash() {
-    navigator.clipboard.writeText(currentRecord.receipt_sha256);
-    document.getElementById('status-verify').textContent = '📋 Hash copied!';
-    setTimeout(() => {
-        document.getElementById('status-verify').textContent = 'Ready';
-    }, 2000);
-}
-
-// Theme toggle (light mode)
-let darkTheme = true;
-function toggleTheme() {
-    darkTheme = !darkTheme;
-    if (darkTheme) {
-        document.body.style.background = '#ECE9D8';
-        document.querySelectorAll('.component-body pre, .tab-content pre').forEach(el => {
-            el.style.background = '#FFF';
-            el.style.color = '#000';
-        });
-    } else {
-        document.body.style.background = '#1E1E1E';
-        document.querySelectorAll('.component-body pre, .tab-content pre').forEach(el => {
-            el.style.background = '#2D2D2D';
-            el.style.color = '#D4D4D4';
-        });
+// Copy receipt hash to clipboard
+async function copyHash() {
+    if (currentRecord.receipt_sha256) {
+        await navigator.clipboard.writeText(currentRecord.receipt_sha256);
+        const el = document.getElementById('status-verify');
+        el.textContent = 'Hash copied!';
+        setTimeout(() => { el.textContent = 'Ready'; }, 2000);
     }
 }
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'v' || e.key === 'V') verifyReceipt();
-    if (e.key === 'e' || e.key === 'E') downloadEvidence();
-    if (e.key === 'c' || e.key === 'C') copyHash();
+    if (e.ctrlKey && e.key === 'v') { e.preventDefault(); verifyReceipt(); }
+    if (e.ctrlKey && e.key === 's') { e.preventDefault(); downloadEvidence(); }
+    if (e.ctrlKey && e.key === 'c' && !window.getSelection().toString()) {
+        e.preventDefault(); copyHash();
+    }
 });
-</script>
 
+// Initial render — UI = projection(receipt)
+renderFields();
+</script>
 </body>
 </html>"""
 
 
-def escape_html(s):
-    """Escape HTML special characters."""
-    if s is None:
-        return ""
-    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+def generate_viewer(receipt_path: Path, output_path: Path) -> dict:
+    """Generate HTML viewer from receipt JSON."""
+    with open(receipt_path, 'r', encoding='utf-8') as f:
+        receipt = json.load(f)
 
+    receipt_json = json.dumps(receipt, indent=2, ensure_ascii=False)
 
-def build_viewer(receipt: dict) -> str:
-    """Build the HTML viewer from a receipt dict."""
-    components = receipt.get("components", {})
-    comp_hashes = receipt.get("component_sha256", {})
+    html = HTML_TEMPLATE.replace('$receipt_json', receipt_json)
 
-    event = components.get("event", {})
-    lease = components.get("lease", {})
-    finding = components.get("finding", {})
-    action = components.get("action", {})
-    result = components.get("result", {})
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write(html)
 
-    # Extract verdict (may be dict or string)
-    verdict = receipt.get("verdict", "UNKNOWN")
-    if isinstance(verdict, dict):
-        verdict = verdict.get("name", str(verdict))
-
-    # Finding fields
-    finding_status = finding.get("status", "UNKNOWN")
-    if isinstance(finding_status, int):
-        status_map = {0: "PASS", 1: "FAIL", 2: "UNKNOWN"}
-        finding_status = status_map.get(finding_status, "UNKNOWN")
-
-    finding_severity = finding.get("severity", "INFO")
-    finding_action_rec = finding.get("action_recommended", False)
-    if isinstance(finding_action_rec, bool):
-        finding_action_rec = "Yes" if finding_action_rec else "No"
-
-    # Result fields
-    result_ack = result.get("acknowledged", False)
-    if isinstance(result_ack, bool):
-        result_ack = "Yes" if result_ack else "No"
-
-    # Event payload
-    event_payload = event.get("payload", {})
-    event_payload_pretty = json.dumps(event_payload, indent=2, default=str)
-    event_payload_sha256 = event.get("payload_sha256", "")
-
-    # JSON for raw tab
-    receipt_json = json.dumps(receipt, indent=2, default=str)
-    receipt_json_escaped = escape_html(receipt_json)
-
-    # Component JSONs
-    event_json_pretty = escape_html(json.dumps(event, indent=2, default=str))
-    lease_json_pretty = escape_html(json.dumps(lease, indent=2, default=str))
-    finding_json_pretty = escape_html(json.dumps(finding, indent=2, default=str))
-    action_json_pretty = escape_html(json.dumps(action, indent=2, default=str))
-    result_json_pretty = escape_html(json.dumps(result, indent=2, default=str))
-
-    # Evidence refs
-    finding_evidence_refs = ", ".join(finding.get("evidence_refs", []))
-
-    # Previous receipt
-    prev_hash = receipt.get("previous_receipt_sha256")
-    if prev_hash is None:
-        prev_hash = "(none — first receipt)"
-
-    # Title
-    title = f"OTP Evidence — {receipt.get('execution_id', 'unknown')}"
-
-    # Apply template
-    html = HTML_TEMPLATE
-    replacements = {
-        "$execution_id": escape_html(receipt.get("execution_id", "")),
-        "$source_adapter": escape_html(receipt.get("source_adapter", "")),
-        "$policy_version": escape_html(receipt.get("policy_version", "")),
-        "$channel_adapter": escape_html(receipt.get("channel_adapter", "")),
-        "$verdict": escape_html(verdict),
-        "$receipt_sha256": escape_html(receipt.get("receipt_sha256", "")),
-        "$previous_receipt_sha256": escape_html(prev_hash),
-        "$event_id": escape_html(event.get("event_id", "")),
-        "$event_source": escape_html(event.get("source", "")),
-        "$event_source_event_type": escape_html(event.get("source_event_type", "")),
-        "$event_source_ref": escape_html(event.get("source_ref", "")),
-        "$event_entity_type": escape_html(event.get("entity_type", "")),
-        "$event_entity_id": escape_html(event.get("entity_id", "")),
-        "$event_observed_at": escape_html(event.get("observed_at", "")),
-        "$event_payload_sha256": escape_html(event_payload_sha256),
-        "$event_payload_pretty": escape_html(event_payload_pretty),
-        "$finding_id": escape_html(finding.get("finding_id", "")),
-        "$finding_rule_id": escape_html(finding.get("rule_id", "")),
-        "$finding_status": escape_html(finding_status),
-        "$finding_severity": escape_html(finding_severity),
-        "$finding_subject_ref": escape_html(finding.get("subject_ref", "")),
-        "$finding_reason_code": escape_html(finding.get("reason_code", "")),
-        "$finding_reason": escape_html(finding.get("reason", "")),
-        "$finding_action_recommended": escape_html(finding_action_rec),
-        "$finding_evidence_refs": escape_html(finding_evidence_refs),
-        "$action_id": escape_html(action.get("action_id", "")),
-        "$action_type": escape_html(action.get("action_type", "")),
-        "$action_target_ref": escape_html(action.get("target_ref", "")),
-        "$action_channel": escape_html(action.get("channel", "")),
-        "$action_urgency": escape_html(action.get("urgency", "")),
-        "$action_objective": escape_html(action.get("objective", "")),
-        "$action_message": escape_html(action.get("message", "")),
-        "$action_require_ack": "Yes" if action.get("require_ack") else "No",
-        "$result_provider": escape_html(result.get("provider", "")),
-        "$result_provider_ref": escape_html(result.get("provider_ref", "")),
-        "$result_status": escape_html(result.get("status", "")),
-        "$result_acknowledged": escape_html(result_ack),
-        "$result_delivery": escape_html(result.get("delivery", "")),
-        "$result_reached_ringing": escape_html(result.get("reached_ringing", "")),
-        "$result_terminal_cause": escape_html(result.get("terminal_cause", "")),
-        "$result_started_at": escape_html(result.get("started_at", "")),
-        "$result_completed_at": escape_html(result.get("completed_at", "")),
-        "$result_response": escape_html(result.get("response", "")),
-        "$sha256_event": escape_html(comp_hashes.get("event", "")),
-        "$sha256_lease": escape_html(comp_hashes.get("lease", "")),
-        "$sha256_finding": escape_html(comp_hashes.get("finding", "")),
-        "$sha256_action": escape_html(comp_hashes.get("action", "")),
-        "$sha256_result": escape_html(comp_hashes.get("result", "")),
-        "$event_json_pretty": event_json_pretty,
-        "$lease_json_pretty": lease_json_pretty,
-        "$finding_json_pretty": finding_json_pretty,
-        "$action_json_pretty": action_json_pretty,
-        "$result_json_pretty": result_json_pretty,
-        "$receipt_json_pretty": receipt_json_escaped,
-        "$receipt_json": receipt_json_escaped.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"),
+    return {
+        'execution_id': receipt.get('execution_id', 'unknown'),
+        'verdict': receipt.get('verdict', 'UNKNOWN'),
+        'output': str(output_path),
     }
-
-    for key, val in replacements.items():
-        html = html.replace(key, val)
-
-    return html
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate OTP Evidence Viewer HTML from receipt JSON"
+        description='Generate OTP Evidence Viewer HTML from receipt JSON'
     )
-    parser.add_argument("receipt", help="Path to receipt JSON file")
-    parser.add_argument("-o", "--output", help="Output HTML path (default: receipt name + .html)")
+    parser.add_argument('receipt', help='Path to evidence receipt JSON')
+    parser.add_argument('-o', '--output', default=None,
+                        help='Output HTML path (default: same dir as receipt)')
     args = parser.parse_args()
 
     receipt_path = Path(args.receipt)
     if not receipt_path.exists():
-        print(f"ERROR: {receipt_path} not found", file=sys.stderr)
+        print(f'ERROR: Receipt not found: {receipt_path}', file=sys.stderr)
         sys.exit(1)
 
-    with open(receipt_path) as f:
-        receipt = json.load(f)
+    if args.output:
+        output_path = Path(args.output)
+    else:
+        output_path = receipt_path.with_name('viewer.html')
 
-    html = build_viewer(receipt)
+    result = generate_viewer(receipt_path, output_path)
 
-    output_path = Path(args.output) if args.output else receipt_path.with_suffix(".html")
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(html)
-
-    print(f"Generated: {output_path}")
-    print(f"Execution: {receipt.get('execution_id', 'unknown')}")
-    print(f"Verdict:   {receipt.get('verdict', 'unknown')}")
-    print(f"Open in browser: file:///{output_path.resolve()}")
+    print(f'Generated: {output_path}')
+    print(f'Execution: {result["execution_id"]}')
+    print(f'Verdict:   {result["verdict"]}')
+    print(f'Open in browser: file:///{output_path.resolve().as_posix()}')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

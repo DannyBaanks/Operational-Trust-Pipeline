@@ -100,32 +100,26 @@ body {
     position: relative;
     top: 1px;
 }
+.tab:hover { background: #C8C4BC; }
 .tab.active {
     background: #ECE9D8;
-    border-bottom: 1px solid #ECE9D8;
     font-weight: bold;
-}
-.tab:hover:not(.active) {
-    background: #C8C4BC;
+    border-bottom: 1px solid #ECE9D8;
 }
 
 /* Tab content */
-.tab-content {
-    display: none;
-    padding: 8px;
-}
-.tab-content.active {
-    display: block;
-}
+.tab-content { display: none; padding: 8px; }
+.tab-content.active { display: block; }
 
-/* Group box */
+/* Group boxes */
 .group-box {
     border: 1px solid #ACA899;
     margin: 8px 0;
-    padding: 12px 8px 8px 8px;
+    padding: 8px;
+    background: #FFF;
     position: relative;
 }
-.group-box .label {
+.group-box > .label {
     background: #ECE9D8;
     padding: 0 4px;
     position: absolute;
@@ -139,12 +133,12 @@ body {
 .field {
     display: flex;
     margin: 3px 0;
+    gap: 8px;
     align-items: flex-start;
 }
 .field-label {
-    width: 140px;
     font-weight: bold;
-    color: #003399;
+    min-width: 140px;
     flex-shrink: 0;
 }
 .field-value {
@@ -152,34 +146,24 @@ body {
     word-break: break-all;
 }
 .field-value code {
-    background: #FFF;
-    border: 1px inset #D4D0C8;
-    padding: 1px 4px;
     font-family: "Lucida Console", "Courier New", monospace;
+    background: #F5F5DC;
+    padding: 1px 3px;
+    border: 1px inset #D4D0C8;
     font-size: 10px;
 }
 
-/* Verdict badge */
-.verdict {
-    display: inline-block;
-    padding: 2px 8px;
-    font-weight: bold;
-    border: 2px outset;
-    font-size: 12px;
-}
-.verdict-ACTION_REQUESTED { background: #FF6B6B; color: #000; border-color: #FF8888; }
-.verdict-NO_ACTION { background: #90EE90; color: #000; border-color: #98FB98; }
-.verdict-BLOCKED { background: #FFB347; color: #000; border-color: #FFC87C; }
-.verdict-NEEDS_REVIEW { background: #FFD700; color: #000; border-color: #FFE44D; }
-.verdict-NOT_DEMONSTRATED { background: #D3D3D3; color: #000; border-color: #DCDCDC; }
-
-/* Finding status */
-.status-PASS { color: #008000; font-weight: bold; }
+/* Status colors */
 .status-FAIL { color: #CC0000; font-weight: bold; }
-.status-UNKNOWN { color: #666; font-style: italic; }
+.status-PASS { color: #006400; font-weight: bold; }
+.status-ERROR { color: #CC0000; font-weight: bold; }
+.status-WARN { color: #FF8C00; font-weight: bold; }
 
-/* Severity */
+/* Severity colors */
+.severity-CRITICAL { color: #CC0000; font-weight: bold; }
 .severity-HIGH { color: #CC0000; font-weight: bold; }
+.severity-MEDIUM { color: #FF8C00; }
+.severity-LOW { color: #0066CC; }
 .severity-INFO { color: #0066CC; }
 
 /* Component cards */
@@ -198,19 +182,13 @@ body {
     align-items: center;
     gap: 8px;
 }
-.component-header:hover {
-    background: #D8D4CC;
-}
-.component-header .arrow {
-    font-size: 8px;
-}
+.component-header:hover { background: #D8D4CC; }
+.component-header .arrow { font-size: 8px; }
 .component-body {
     padding: 8px;
     display: none;
 }
-.component-body.open {
-    display: block;
-}
+.component-body.open { display: block; }
 .component-body pre {
     background: #FFF;
     border: 1px inset #D4D0C8;
@@ -243,12 +221,8 @@ body {
     font-size: 11px;
     cursor: pointer;
 }
-.verify-btn:hover {
-    background: #C8C4BC;
-}
-.verify-btn:active {
-    border-style: inset;
-}
+.verify-btn:hover { background: #C8C4BC; }
+.verify-btn:active { border-style: inset; }
 
 /* Verification result */
 .verify-result {
@@ -280,17 +254,19 @@ body {
     margin-bottom: 4px;
 }
 
-/* Ledger chain */
-.ledger-chain {
-    font-family: "Lucida Console", "Courier New", monospace;
-    font-size: 9px;
-    background: #1E1E1E;
-    color: #0F0;
-    padding: 8px;
-    border: 2px inset #444;
-    overflow-x: auto;
-    white-space: pre;
+/* Phase badge */
+.phase-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid #ACA899;
+    background: #E8E4DC;
+    font-size: 10px;
+    margin-left: 8px;
 }
+.phase-badge.RESOLVED { background: #90EE90; color: #006400; }
+.phase-badge.OPEN { background: #FFE0B2; color: #E65100; }
+.phase-badge.SATISFIED { background: #90EE90; color: #006400; }
+.phase-badge.EXPIRED { background: #FFB3B3; color: #8B0000; }
 
 /* XP-style scrollbar */
 ::-webkit-scrollbar { width: 16px; height: 16px; }
@@ -312,7 +288,7 @@ body {
 <!-- Title Bar -->
 <div class="title-bar">
     <span class="icon">📋</span>
-    <span class="title">OTP Evidence Viewer - exec_demo_001</span>
+    <span class="title">OTP Evidence Viewer — <span id="v-execution-id"></span></span>
     <span class="close" onclick="window.close()">X</span>
 </div>
 
@@ -323,7 +299,6 @@ body {
     <span class="menu-item" onclick="verifyReceipt()">🔍 Verify</span>
     <span class="menu-item" onclick="downloadEvidence()">💾 Save As...</span>
     <span class="menu-item" onclick="copyHash()">📋 Copy Hash</span>
-    <span class="menu-item" onclick="toggleTheme()">🌙 Theme</span>
 </div>
 
 <!-- Tabs -->
@@ -342,26 +317,23 @@ body {
         <span class="label">Execution</span>
         <div class="field">
             <span class="field-label">Execution ID:</span>
-            <span class="field-value"><code>exec_demo_001</code></span>
+            <span class="field-value"><code id="v-exec-id"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Source Adapter:</span>
-            <span class="field-value">roadstar-workbook-v0</span>
+            <span class="field-value" id="v-source-adapter"></span>
         </div>
         <div class="field">
             <span class="field-label">Policy Version:</span>
-            <span class="field-value">ack-lease-v0</span>
+            <span class="field-value" id="v-policy-version"></span>
         </div>
         <div class="field">
             <span class="field-label">Channel Adapter:</span>
-            <span class="field-value">mock</span>
+            <span class="field-value" id="v-channel"></span>
         </div>
-    </div>
-
-    <div class="group-box">
-        <span class="label">Verdict</span>
-        <div style="text-align: center; padding: 8px;">
-            <span class="verdict verdict-ACTION_REQUESTED">ACTION_REQUESTED</span>
+        <div class="field">
+            <span class="field-label">Verdict:</span>
+            <span class="field-value" id="v-verdict"></span>
         </div>
     </div>
 
@@ -369,23 +341,19 @@ body {
         <span class="label">Finding</span>
         <div class="field">
             <span class="field-label">Status:</span>
-            <span class="field-value status-FAIL">FAIL</span>
+            <span class="field-value" id="v-finding-status"></span>
         </div>
         <div class="field">
             <span class="field-label">Reason Code:</span>
-            <span class="field-value"><code>ACK_LEASE_EXPIRED</code></span>
+            <span class="field-value"><code id="v-finding-reason-code"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Severity:</span>
-            <span class="field-value severity-HIGH">HIGH</span>
+            <span class="field-value" id="v-finding-severity"></span>
         </div>
         <div class="field">
             <span class="field-label">Action Recommended:</span>
-            <span class="field-value">Yes</span>
-        </div>
-        <div class="field">
-            <span class="field-label">Description:</span>
-            <span class="field-value">Acknowledgement was not observed by the deadline.</span>
+            <span class="field-value" id="v-finding-action-rec"></span>
         </div>
     </div>
 
@@ -393,11 +361,11 @@ body {
         <span class="label">Receipt Integrity</span>
         <div class="field">
             <span class="field-label">Receipt SHA-256:</span>
-            <span class="field-value"><span class="sha256" id="receipt-hash">bb098d54cca0aaa77916284b3ba5a0d33ef4dad269d105d70871758dd8df09e0</span></span>
+            <span class="field-value"><span class="sha256" id="receipt-hash"></span></span>
         </div>
         <div class="field">
             <span class="field-label">Previous Receipt:</span>
-            <span class="field-value"><span class="sha256">(none — first receipt)</span></span>
+            <span class="field-value"><span class="sha256" id="v-prev-receipt"></span></span>
         </div>
         <div style="margin-top: 8px; text-align: center;">
             <button class="verify-btn" onclick="verifyReceipt()">🔍 Verify Integrity</button>
@@ -420,50 +388,41 @@ body {
         <span class="label">Operational Event</span>
         <div class="field">
             <span class="field-label">Event ID:</span>
-            <span class="field-value"><code>evt_175c1bc3e1b0d5c93c52</code></span>
+            <span class="field-value"><code id="v-event-id"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Source:</span>
-            <span class="field-value">roadstar</span>
+            <span class="field-value" id="v-event-source"></span>
         </div>
         <div class="field">
             <span class="field-label">Event Type:</span>
-            <span class="field-value">roadstar_event_type</span>
+            <span class="field-value" id="v-event-type"></span>
         </div>
         <div class="field">
             <span class="field-label">Source Ref:</span>
-            <span class="field-value"><code>roadstar_ref</code></span>
+            <span class="field-value"><code id="v-event-source-ref"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Entity Type:</span>
-            <span class="field-value">dispatch_leg</span>
+            <span class="field-value" id="v-event-entity-type"></span>
         </div>
         <div class="field">
             <span class="field-label">Entity ID:</span>
-            <span class="field-value"><code>LEG-001A</code></span>
+            <span class="field-value"><code id="v-event-entity-id"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Observed At:</span>
-            <span class="field-value">2026-09-10T13:55:00Z</span>
+            <span class="field-value" id="v-event-observed-at"></span>
         </div>
         <div class="field">
             <span class="field-label">Payload SHA-256:</span>
-            <span class="field-value"><span class="sha256">a4171e56ea3412fa43d8a5155ea757cfea83c56efbd4e3ca8d29d06a0a07a183</span></span>
+            <span class="field-value"><span class="sha256" id="v-event-payload-sha"></span></span>
         </div>
     </div>
 
     <div class="group-box">
         <span class="label">Payload</span>
-        <pre>{
-  &quot;trip_ref&quot;: &quot;TRIP-001&quot;,
-  &quot;leg_ref&quot;: &quot;LEG-001A&quot;,
-  &quot;expected_at&quot;: &quot;2026-09-10T14:00:00Z&quot;,
-  &quot;due_at&quot;: &quot;2026-09-10T14:30:00Z&quot;,
-  &quot;latest_state_at&quot;: &quot;2026-09-10T13:55:00Z&quot;,
-  &quot;operation_status&quot;: &quot;IN_TRANSIT&quot;,
-  &quot;contact_ref&quot;: &quot;driver@example.com&quot;,
-  &quot;ack_due_at&quot;: &quot;2026-09-10T14:00:00Z&quot;
-}</pre>
+        <pre id="v-event-payload"></pre>
     </div>
 </div>
 
@@ -473,39 +432,39 @@ body {
         <span class="label">Finding Details</span>
         <div class="field">
             <span class="field-label">Finding ID:</span>
-            <span class="field-value"><code>finding_658c6b05f34a58be1c66</code></span>
+            <span class="field-value"><code id="v-finding-id"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Rule ID:</span>
-            <span class="field-value">ack-lease-v0</span>
+            <span class="field-value" id="v-finding-rule-id"></span>
         </div>
         <div class="field">
             <span class="field-label">Status:</span>
-            <span class="field-value status-FAIL">FAIL</span>
+            <span class="field-value" id="v-finding-status2"></span>
         </div>
         <div class="field">
             <span class="field-label">Severity:</span>
-            <span class="field-value severity-HIGH">HIGH</span>
+            <span class="field-value" id="v-finding-severity2"></span>
         </div>
         <div class="field">
             <span class="field-label">Subject:</span>
-            <span class="field-value"><code>LEG-001A</code></span>
+            <span class="field-value"><code id="v-finding-subject"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Reason Code:</span>
-            <span class="field-value"><code>ACK_LEASE_EXPIRED</code></span>
+            <span class="field-value"><code id="v-finding-reason-code2"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Reason:</span>
-            <span class="field-value">Acknowledgement was not observed by the deadline.</span>
+            <span class="field-value" id="v-finding-reason"></span>
         </div>
         <div class="field">
             <span class="field-label">Action Recommended:</span>
-            <span class="field-value">Yes</span>
+            <span class="field-value" id="v-finding-action-rec2"></span>
         </div>
         <div class="field">
             <span class="field-label">Evidence Refs:</span>
-            <span class="field-value"><code>evt_175c1bc3e1b0d5c93c52, lease_461c0951b801f0b3cb91</code></span>
+            <span class="field-value"><code id="v-finding-evidence-refs"></code></span>
         </div>
     </div>
 
@@ -513,7 +472,7 @@ body {
         <span class="label">Component SHA-256</span>
         <div class="field">
             <span class="field-label">Finding Hash:</span>
-            <span class="field-value"><span class="sha256">b208c200f62fb3d37fb70cd8e56497526e09db2caa02bd80f41be7770cda5d2b</span></span>
+            <span class="field-value"><span class="sha256" id="v-sha-finding"></span></span>
         </div>
     </div>
 </div>
@@ -524,35 +483,35 @@ body {
         <span class="label">Action Request</span>
         <div class="field">
             <span class="field-label">Action ID:</span>
-            <span class="field-value"><code>action_466ec75356f6e57607ae</code></span>
+            <span class="field-value"><code id="v-action-id"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Type:</span>
-            <span class="field-value">notify</span>
+            <span class="field-value" id="v-action-type"></span>
         </div>
         <div class="field">
             <span class="field-label">Target:</span>
-            <span class="field-value"><code>driver@example.com</code></span>
+            <span class="field-value"><code id="v-action-target"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Channel:</span>
-            <span class="field-value">mock</span>
+            <span class="field-value" id="v-action-channel"></span>
         </div>
         <div class="field">
             <span class="field-label">Urgency:</span>
-            <span class="field-value">HIGH</span>
+            <span class="field-value" id="v-action-urgency"></span>
         </div>
         <div class="field">
             <span class="field-label">Objective:</span>
-            <span class="field-value">Request acknowledgement for an overdue operational assignment.</span>
+            <span class="field-value" id="v-action-objective"></span>
         </div>
         <div class="field">
             <span class="field-label">Message:</span>
-            <span class="field-value">Please acknowledge assignment TRIP-001:LEG-001A.</span>
+            <span class="field-value" id="v-action-message"></span>
         </div>
         <div class="field">
             <span class="field-label">Require ACK:</span>
-            <span class="field-value">Yes</span>
+            <span class="field-value" id="v-action-require-ack"></span>
         </div>
     </div>
 
@@ -560,43 +519,43 @@ body {
         <span class="label">Action Result</span>
         <div class="field">
             <span class="field-label">Provider:</span>
-            <span class="field-value">mock</span>
+            <span class="field-value" id="v-result-provider"></span>
         </div>
         <div class="field">
             <span class="field-label">Provider Ref:</span>
-            <span class="field-value"><code>mock_ref</code></span>
+            <span class="field-value"><code id="v-result-provider-ref"></code></span>
         </div>
         <div class="field">
             <span class="field-label">Status:</span>
-            <span class="field-value">ACKNOWLEDGED</span>
+            <span class="field-value" id="v-result-status"></span>
         </div>
         <div class="field">
             <span class="field-label">Acknowledged:</span>
-            <span class="field-value">Yes</span>
+            <span class="field-value" id="v-result-acknowledged"></span>
         </div>
         <div class="field">
             <span class="field-label">Delivery:</span>
-            <span class="field-value">KNOWN</span>
+            <span class="field-value" id="v-result-delivery"></span>
         </div>
         <div class="field">
             <span class="field-label">Reached Ringing:</span>
-            <span class="field-value">TRUE</span>
+            <span class="field-value" id="v-result-reached-ringing"></span>
         </div>
         <div class="field">
             <span class="field-label">Terminal Cause:</span>
-            <span class="field-value">ACKNOWLEDGED</span>
+            <span class="field-value" id="v-result-terminal-cause"></span>
         </div>
         <div class="field">
             <span class="field-label">Started At:</span>
-            <span class="field-value">2026-09-10T13:56:00Z</span>
+            <span class="field-value" id="v-result-started-at"></span>
         </div>
         <div class="field">
             <span class="field-label">Completed At:</span>
-            <span class="field-value">2026-09-10T13:56:05Z</span>
+            <span class="field-value" id="v-result-completed-at"></span>
         </div>
         <div class="field">
             <span class="field-label">Response:</span>
-            <span class="field-value">Acknowledged by driver</span>
+            <span class="field-value" id="v-result-response"></span>
         </div>
     </div>
 
@@ -604,11 +563,11 @@ body {
         <span class="label">Component SHA-256</span>
         <div class="field">
             <span class="field-label">Action Hash:</span>
-            <span class="field-value"><span class="sha256">43f3c02dd7b22e90eeac6666cb83b0fe73af8e7589fecbd854ae064e6df1954c</span></span>
+            <span class="field-value"><span class="sha256" id="v-sha-action"></span></span>
         </div>
         <div class="field">
             <span class="field-label">Result Hash:</span>
-            <span class="field-value"><span class="sha256">77aeba8043aff5c89a131d6b221f46db384eaae16ff3e08b3ed4397724073178</span></span>
+            <span class="field-value"><span class="sha256" id="v-sha-result"></span></span>
         </div>
     </div>
 </div>
@@ -619,31 +578,10 @@ body {
         <div class="component-header" onclick="toggleComponent('comp-event')">
             <span class="arrow" id="arrow-comp-event">▶</span>
             Event Component
-            <span class="sha256" style="margin-left: auto;">8cd5251a834feee18d4a5090d7e1d9784a18caad60fefcb8cb8deadc5d38d591</span>
+            <span class="sha256" style="margin-left: auto;" id="v-comp-sha-event"></span>
         </div>
         <div class="component-body" id="comp-event">
-            <pre>{
-  &quot;event_id&quot;: &quot;evt_175c1bc3e1b0d5c93c52&quot;,
-  &quot;schema_version&quot;: &quot;operational-event/1&quot;,
-  &quot;source&quot;: &quot;roadstar&quot;,
-  &quot;source_event_type&quot;: &quot;dispatch.leg_observed&quot;,
-  &quot;source_ref&quot;: &quot;TRIP-001:LEG-001A&quot;,
-  &quot;entity_type&quot;: &quot;dispatch_leg&quot;,
-  &quot;entity_id&quot;: &quot;LEG-001A&quot;,
-  &quot;observed_at&quot;: &quot;2026-09-10T13:55:00Z&quot;,
-  &quot;payload&quot;: {
-    &quot;trip_ref&quot;: &quot;TRIP-001&quot;,
-    &quot;leg_ref&quot;: &quot;LEG-001A&quot;,
-    &quot;expected_at&quot;: &quot;2026-09-10T14:00:00Z&quot;,
-    &quot;due_at&quot;: &quot;2026-09-10T14:30:00Z&quot;,
-    &quot;latest_state_at&quot;: &quot;2026-09-10T13:55:00Z&quot;,
-    &quot;operation_status&quot;: &quot;IN_TRANSIT&quot;,
-    &quot;contact_ref&quot;: &quot;driver@example.com&quot;,
-    &quot;ack_due_at&quot;: &quot;2026-09-10T14:00:00Z&quot;
-  },
-  &quot;payload_sha256&quot;: &quot;a4171e56ea3412fa43d8a5155ea757cfea83c56efbd4e3ca8d29d06a0a07a183&quot;,
-  &quot;evidence_refs&quot;: []
-}</pre>
+            <pre id="v-comp-json-event"></pre>
         </div>
     </div>
 
@@ -651,20 +589,10 @@ body {
         <div class="component-header" onclick="toggleComponent('comp-lease')">
             <span class="arrow" id="arrow-comp-lease">▶</span>
             Lease Component
-            <span class="sha256" style="margin-left: auto;">96031a308a847fcd93bc2d027108fe802d9d5dee66acfef8ff164143b6679442</span>
+            <span class="sha256" style="margin-left: auto;" id="v-comp-sha-lease"></span>
         </div>
         <div class="component-body" id="comp-lease">
-            <pre>{
-  &quot;lease_id&quot;: &quot;lease_461c0951b801f0b3cb91&quot;,
-  &quot;kind&quot;: &quot;acknowledgement&quot;,
-  &quot;subject_ref&quot;: &quot;LEG-001A&quot;,
-  &quot;opened_at&quot;: &quot;2026-09-10T13:55:00Z&quot;,
-  &quot;due_at&quot;: &quot;2026-09-10T14:00:00Z&quot;,
-  &quot;state&quot;: &quot;OPEN&quot;,
-  &quot;required_condition&quot;: &quot;acknowledged&quot;,
-  &quot;resolution&quot;: null,
-  &quot;closed_at&quot;: null
-}</pre>
+            <pre id="v-comp-json-lease"></pre>
         </div>
     </div>
 
@@ -672,23 +600,10 @@ body {
         <div class="component-header" onclick="toggleComponent('comp-finding')">
             <span class="arrow" id="arrow-comp-finding">▶</span>
             Finding Component
-            <span class="sha256" style="margin-left: auto;">b208c200f62fb3d37fb70cd8e56497526e09db2caa02bd80f41be7770cda5d2b</span>
+            <span class="sha256" style="margin-left: auto;" id="v-comp-sha-finding"></span>
         </div>
         <div class="component-body" id="comp-finding">
-            <pre>{
-  &quot;finding_id&quot;: &quot;finding_658c6b05f34a58be1c66&quot;,
-  &quot;rule_id&quot;: &quot;ack-lease-v0&quot;,
-  &quot;status&quot;: &quot;FAIL&quot;,
-  &quot;severity&quot;: &quot;HIGH&quot;,
-  &quot;subject_ref&quot;: &quot;LEG-001A&quot;,
-  &quot;reason_code&quot;: &quot;ACK_LEASE_EXPIRED&quot;,
-  &quot;reason&quot;: &quot;Acknowledgement was not observed by the deadline.&quot;,
-  &quot;evidence_refs&quot;: [
-    &quot;evt_175c1bc3e1b0d5c93c52&quot;,
-    &quot;lease_461c0951b801f0b3cb91&quot;
-  ],
-  &quot;action_recommended&quot;: true
-}</pre>
+            <pre id="v-comp-json-finding"></pre>
         </div>
     </div>
 
@@ -696,27 +611,10 @@ body {
         <div class="component-header" onclick="toggleComponent('comp-action')">
             <span class="arrow" id="arrow-comp-action">▶</span>
             Action Component
-            <span class="sha256" style="margin-left: auto;">43f3c02dd7b22e90eeac6666cb83b0fe73af8e7589fecbd854ae064e6df1954c</span>
+            <span class="sha256" style="margin-left: auto;" id="v-comp-sha-action"></span>
         </div>
         <div class="component-body" id="comp-action">
-            <pre>{
-  &quot;action_id&quot;: &quot;action_466ec75356f6e57607ae&quot;,
-  &quot;action_type&quot;: &quot;notify&quot;,
-  &quot;target_ref&quot;: &quot;driver@example.com&quot;,
-  &quot;channel&quot;: &quot;mock&quot;,
-  &quot;objective&quot;: &quot;Request acknowledgement for an overdue operational assignment.&quot;,
-  &quot;message&quot;: &quot;Please acknowledge assignment TRIP-001:LEG-001A.&quot;,
-  &quot;require_ack&quot;: true,
-  &quot;urgency&quot;: &quot;HIGH&quot;,
-  &quot;source_finding_ids&quot;: [
-    &quot;finding_658c6b05f34a58be1c66&quot;
-  ],
-  &quot;authority_context&quot;: {
-    &quot;communication_allowed&quot;: true,
-    &quot;channel&quot;: &quot;mock&quot;
-  },
-  &quot;metadata&quot;: {}
-}</pre>
+            <pre id="v-comp-json-action"></pre>
         </div>
     </div>
 
@@ -724,26 +622,10 @@ body {
         <div class="component-header" onclick="toggleComponent('comp-result')">
             <span class="arrow" id="arrow-comp-result">▶</span>
             Result Component
-            <span class="sha256" style="margin-left: auto;">77aeba8043aff5c89a131d6b221f46db384eaae16ff3e08b3ed4397724073178</span>
+            <span class="sha256" style="margin-left: auto;" id="v-comp-sha-result"></span>
         </div>
         <div class="component-body" id="comp-result">
-            <pre>{
-  &quot;action_id&quot;: &quot;action_466ec75356f6e57607ae&quot;,
-  &quot;provider&quot;: &quot;mock&quot;,
-  &quot;provider_ref&quot;: &quot;mock-ref-001&quot;,
-  &quot;status&quot;: &quot;ACKNOWLEDGED&quot;,
-  &quot;acknowledged&quot;: true,
-  &quot;response&quot;: &quot;Acknowledged by driver&quot;,
-  &quot;started_at&quot;: &quot;2026-09-10T13:56:00Z&quot;,
-  &quot;completed_at&quot;: &quot;2026-09-10T13:56:05Z&quot;,
-  &quot;error_code&quot;: null,
-  &quot;evidence_refs&quot;: [],
-  &quot;provider_accepted&quot;: true,
-  &quot;delivery&quot;: &quot;KNOWN&quot;,
-  &quot;reached_ringing&quot;: &quot;TRUE&quot;,
-  &quot;terminal_cause&quot;: &quot;ACKNOWLEDGED&quot;,
-  &quot;retry_safe&quot;: &quot;FALSE&quot;
-}</pre>
+            <pre id="v-comp-json-result"></pre>
         </div>
     </div>
 </div>
@@ -752,118 +634,14 @@ body {
 <div id="tab-raw" class="tab-content">
     <div class="group-box">
         <span class="label">Full Evidence Receipt (JSON)</span>
-        <pre style="max-height: 500px; overflow-y: auto;">{
-  &quot;schema_version&quot;: &quot;evidence-receipt/1&quot;,
-  &quot;execution_id&quot;: &quot;exec_demo_001&quot;,
-  &quot;source_adapter&quot;: &quot;roadstar-workbook-v0&quot;,
-  &quot;policy_version&quot;: &quot;ack-lease-v0&quot;,
-  &quot;channel_adapter&quot;: &quot;mock&quot;,
-  &quot;verdict&quot;: &quot;ACTION_REQUESTED&quot;,
-  &quot;components&quot;: {
-    &quot;event&quot;: {
-      &quot;event_id&quot;: &quot;evt_175c1bc3e1b0d5c93c52&quot;,
-      &quot;schema_version&quot;: &quot;operational-event/1&quot;,
-      &quot;source&quot;: &quot;roadstar&quot;,
-      &quot;source_event_type&quot;: &quot;dispatch.leg_observed&quot;,
-      &quot;source_ref&quot;: &quot;TRIP-001:LEG-001A&quot;,
-      &quot;entity_type&quot;: &quot;dispatch_leg&quot;,
-      &quot;entity_id&quot;: &quot;LEG-001A&quot;,
-      &quot;observed_at&quot;: &quot;2026-09-10T13:55:00Z&quot;,
-      &quot;payload&quot;: {
-        &quot;trip_ref&quot;: &quot;TRIP-001&quot;,
-        &quot;leg_ref&quot;: &quot;LEG-001A&quot;,
-        &quot;expected_at&quot;: &quot;2026-09-10T14:00:00Z&quot;,
-        &quot;due_at&quot;: &quot;2026-09-10T14:30:00Z&quot;,
-        &quot;latest_state_at&quot;: &quot;2026-09-10T13:55:00Z&quot;,
-        &quot;operation_status&quot;: &quot;IN_TRANSIT&quot;,
-        &quot;contact_ref&quot;: &quot;driver@example.com&quot;,
-        &quot;ack_due_at&quot;: &quot;2026-09-10T14:00:00Z&quot;
-      },
-      &quot;payload_sha256&quot;: &quot;a4171e56ea3412fa43d8a5155ea757cfea83c56efbd4e3ca8d29d06a0a07a183&quot;,
-      &quot;evidence_refs&quot;: []
-    },
-    &quot;lease&quot;: {
-      &quot;lease_id&quot;: &quot;lease_461c0951b801f0b3cb91&quot;,
-      &quot;kind&quot;: &quot;acknowledgement&quot;,
-      &quot;subject_ref&quot;: &quot;LEG-001A&quot;,
-      &quot;opened_at&quot;: &quot;2026-09-10T13:55:00Z&quot;,
-      &quot;due_at&quot;: &quot;2026-09-10T14:00:00Z&quot;,
-      &quot;state&quot;: &quot;OPEN&quot;,
-      &quot;required_condition&quot;: &quot;acknowledged&quot;,
-      &quot;resolution&quot;: null,
-      &quot;closed_at&quot;: null
-    },
-    &quot;finding&quot;: {
-      &quot;finding_id&quot;: &quot;finding_658c6b05f34a58be1c66&quot;,
-      &quot;rule_id&quot;: &quot;ack-lease-v0&quot;,
-      &quot;status&quot;: &quot;FAIL&quot;,
-      &quot;severity&quot;: &quot;HIGH&quot;,
-      &quot;subject_ref&quot;: &quot;LEG-001A&quot;,
-      &quot;reason_code&quot;: &quot;ACK_LEASE_EXPIRED&quot;,
-      &quot;reason&quot;: &quot;Acknowledgement was not observed by the deadline.&quot;,
-      &quot;evidence_refs&quot;: [
-        &quot;evt_175c1bc3e1b0d5c93c52&quot;,
-        &quot;lease_461c0951b801f0b3cb91&quot;
-      ],
-      &quot;action_recommended&quot;: true
-    },
-    &quot;action&quot;: {
-      &quot;action_id&quot;: &quot;action_466ec75356f6e57607ae&quot;,
-      &quot;action_type&quot;: &quot;notify&quot;,
-      &quot;target_ref&quot;: &quot;driver@example.com&quot;,
-      &quot;channel&quot;: &quot;mock&quot;,
-      &quot;objective&quot;: &quot;Request acknowledgement for an overdue operational assignment.&quot;,
-      &quot;message&quot;: &quot;Please acknowledge assignment TRIP-001:LEG-001A.&quot;,
-      &quot;require_ack&quot;: true,
-      &quot;urgency&quot;: &quot;HIGH&quot;,
-      &quot;source_finding_ids&quot;: [
-        &quot;finding_658c6b05f34a58be1c66&quot;
-      ],
-      &quot;authority_context&quot;: {
-        &quot;communication_allowed&quot;: true,
-        &quot;channel&quot;: &quot;mock&quot;
-      },
-      &quot;metadata&quot;: {}
-    },
-    &quot;result&quot;: {
-      &quot;action_id&quot;: &quot;action_466ec75356f6e57607ae&quot;,
-      &quot;provider&quot;: &quot;mock&quot;,
-      &quot;provider_ref&quot;: &quot;mock-ref-001&quot;,
-      &quot;status&quot;: &quot;ACKNOWLEDGED&quot;,
-      &quot;acknowledged&quot;: true,
-      &quot;response&quot;: &quot;Acknowledged by driver&quot;,
-      &quot;started_at&quot;: &quot;2026-09-10T13:56:00Z&quot;,
-      &quot;completed_at&quot;: &quot;2026-09-10T13:56:05Z&quot;,
-      &quot;error_code&quot;: null,
-      &quot;evidence_refs&quot;: [],
-      &quot;provider_accepted&quot;: true,
-      &quot;delivery&quot;: &quot;KNOWN&quot;,
-      &quot;reached_ringing&quot;: &quot;TRUE&quot;,
-      &quot;terminal_cause&quot;: &quot;ACKNOWLEDGED&quot;,
-      &quot;retry_safe&quot;: &quot;FALSE&quot;
-    }
-  },
-  &quot;component_sha256&quot;: {
-    &quot;event&quot;: &quot;8cd5251a834feee18d4a5090d7e1d9784a18caad60fefcb8cb8deadc5d38d591&quot;,
-    &quot;lease&quot;: &quot;96031a308a847fcd93bc2d027108fe802d9d5dee66acfef8ff164143b6679442&quot;,
-    &quot;finding&quot;: &quot;b208c200f62fb3d37fb70cd8e56497526e09db2caa02bd80f41be7770cda5d2b&quot;,
-    &quot;action&quot;: &quot;43f3c02dd7b22e90eeac6666cb83b0fe73af8e7589fecbd854ae064e6df1954c&quot;,
-    &quot;result&quot;: &quot;77aeba8043aff5c89a131d6b221f46db384eaae16ff3e08b3ed4397724073178&quot;
-  },
-  &quot;previous_receipt_sha256&quot;: null,
-  &quot;limitations&quot;: [
-    &quot;Integrity verification does not replay external provider behavior.&quot;,
-    &quot;An unanchored append-only chain cannot detect tail truncation.&quot;
-  ],
-  &quot;receipt_sha256&quot;: &quot;bb098d54cca0aaa77916284b3ba5a0d33ef4dad269d105d70871758dd8df09e0&quot;
-}</pre>
+        <pre style="max-height: 500px; overflow-y: auto;" id="v-raw-json"></pre>
     </div>
 </div>
 
 <!-- Status Bar -->
 <div class="status-bar">
-    <span class="section">Schema: evidence-receipt/1</span>
-    <span class="section">Components: 5</span>
+    <span class="section">Schema: <span id="v-schema"></span></span>
+    <span class="section">Components: <span id="v-component-count"></span></span>
     <span class="section" id="status-verify">Ready</span>
 </div>
 
@@ -871,114 +649,114 @@ body {
 
 <!-- Evidence JSON embedded for verification -->
 <script id="otp-evidence" type="application/json">{
-  &amp;quot;schema_version&amp;quot;: &amp;quot;evidence-receipt/1&amp;quot;,
-  &amp;quot;execution_id&amp;quot;: &amp;quot;exec_demo_001&amp;quot;,
-  &amp;quot;source_adapter&amp;quot;: &amp;quot;roadstar-workbook-v0&amp;quot;,
-  &amp;quot;policy_version&amp;quot;: &amp;quot;ack-lease-v0&amp;quot;,
-  &amp;quot;channel_adapter&amp;quot;: &amp;quot;mock&amp;quot;,
-  &amp;quot;verdict&amp;quot;: &amp;quot;ACTION_REQUESTED&amp;quot;,
-  &amp;quot;components&amp;quot;: {
-    &amp;quot;event&amp;quot;: {
-      &amp;quot;event_id&amp;quot;: &amp;quot;evt_175c1bc3e1b0d5c93c52&amp;quot;,
-      &amp;quot;schema_version&amp;quot;: &amp;quot;operational-event/1&amp;quot;,
-      &amp;quot;source&amp;quot;: &amp;quot;roadstar&amp;quot;,
-      &amp;quot;source_event_type&amp;quot;: &amp;quot;dispatch.leg_observed&amp;quot;,
-      &amp;quot;source_ref&amp;quot;: &amp;quot;TRIP-001:LEG-001A&amp;quot;,
-      &amp;quot;entity_type&amp;quot;: &amp;quot;dispatch_leg&amp;quot;,
-      &amp;quot;entity_id&amp;quot;: &amp;quot;LEG-001A&amp;quot;,
-      &amp;quot;observed_at&amp;quot;: &amp;quot;2026-09-10T13:55:00Z&amp;quot;,
-      &amp;quot;payload&amp;quot;: {
-        &amp;quot;trip_ref&amp;quot;: &amp;quot;TRIP-001&amp;quot;,
-        &amp;quot;leg_ref&amp;quot;: &amp;quot;LEG-001A&amp;quot;,
-        &amp;quot;expected_at&amp;quot;: &amp;quot;2026-09-10T14:00:00Z&amp;quot;,
-        &amp;quot;due_at&amp;quot;: &amp;quot;2026-09-10T14:30:00Z&amp;quot;,
-        &amp;quot;latest_state_at&amp;quot;: &amp;quot;2026-09-10T13:55:00Z&amp;quot;,
-        &amp;quot;operation_status&amp;quot;: &amp;quot;IN_TRANSIT&amp;quot;,
-        &amp;quot;contact_ref&amp;quot;: &amp;quot;driver@example.com&amp;quot;,
-        &amp;quot;ack_due_at&amp;quot;: &amp;quot;2026-09-10T14:00:00Z&amp;quot;
+  "schema_version": "evidence-receipt/1",
+  "execution_id": "exec_demo_001",
+  "source_adapter": "roadstar-workbook-v0",
+  "policy_version": "ack-lease-v0",
+  "channel_adapter": "mock",
+  "verdict": "ACTION_REQUESTED",
+  "components": {
+    "event": {
+      "event_id": "evt_175c1bc3e1b0d5c93c52",
+      "schema_version": "operational-event/1",
+      "source": "roadstar",
+      "source_event_type": "dispatch.leg_observed",
+      "source_ref": "TRIP-001:LEG-001A",
+      "entity_type": "dispatch_leg",
+      "entity_id": "LEG-001A",
+      "observed_at": "2026-09-10T13:55:00Z",
+      "payload": {
+        "trip_ref": "TRIP-001",
+        "leg_ref": "LEG-001A",
+        "expected_at": "2026-09-10T14:00:00Z",
+        "due_at": "2026-09-10T14:30:00Z",
+        "latest_state_at": "2026-09-10T13:55:00Z",
+        "operation_status": "IN_TRANSIT",
+        "contact_ref": "driver@example.com",
+        "ack_due_at": "2026-09-10T14:00:00Z"
       },
-      &amp;quot;payload_sha256&amp;quot;: &amp;quot;a4171e56ea3412fa43d8a5155ea757cfea83c56efbd4e3ca8d29d06a0a07a183&amp;quot;,
-      &amp;quot;evidence_refs&amp;quot;: []
+      "payload_sha256": "a4171e56ea3412fa43d8a5155ea757cfea83c56efbd4e3ca8d29d06a0a07a183",
+      "evidence_refs": []
     },
-    &amp;quot;lease&amp;quot;: {
-      &amp;quot;lease_id&amp;quot;: &amp;quot;lease_461c0951b801f0b3cb91&amp;quot;,
-      &amp;quot;kind&amp;quot;: &amp;quot;acknowledgement&amp;quot;,
-      &amp;quot;subject_ref&amp;quot;: &amp;quot;LEG-001A&amp;quot;,
-      &amp;quot;opened_at&amp;quot;: &amp;quot;2026-09-10T13:55:00Z&amp;quot;,
-      &amp;quot;due_at&amp;quot;: &amp;quot;2026-09-10T14:00:00Z&amp;quot;,
-      &amp;quot;state&amp;quot;: &amp;quot;OPEN&amp;quot;,
-      &amp;quot;required_condition&amp;quot;: &amp;quot;acknowledged&amp;quot;,
-      &amp;quot;resolution&amp;quot;: null,
-      &amp;quot;closed_at&amp;quot;: null
+    "lease": {
+      "lease_id": "lease_461c0951b801f0b3cb91",
+      "kind": "acknowledgement",
+      "subject_ref": "LEG-001A",
+      "opened_at": "2026-09-10T13:55:00Z",
+      "due_at": "2026-09-10T14:00:00Z",
+      "state": "OPEN",
+      "required_condition": "acknowledged",
+      "resolution": null,
+      "closed_at": null
     },
-    &amp;quot;finding&amp;quot;: {
-      &amp;quot;finding_id&amp;quot;: &amp;quot;finding_658c6b05f34a58be1c66&amp;quot;,
-      &amp;quot;rule_id&amp;quot;: &amp;quot;ack-lease-v0&amp;quot;,
-      &amp;quot;status&amp;quot;: &amp;quot;FAIL&amp;quot;,
-      &amp;quot;severity&amp;quot;: &amp;quot;HIGH&amp;quot;,
-      &amp;quot;subject_ref&amp;quot;: &amp;quot;LEG-001A&amp;quot;,
-      &amp;quot;reason_code&amp;quot;: &amp;quot;ACK_LEASE_EXPIRED&amp;quot;,
-      &amp;quot;reason&amp;quot;: &amp;quot;Acknowledgement was not observed by the deadline.&amp;quot;,
-      &amp;quot;evidence_refs&amp;quot;: [
-        &amp;quot;evt_175c1bc3e1b0d5c93c52&amp;quot;,
-        &amp;quot;lease_461c0951b801f0b3cb91&amp;quot;
+    "finding": {
+      "finding_id": "finding_658c6b05f34a58be1c66",
+      "rule_id": "ack-lease-v0",
+      "status": "FAIL",
+      "severity": "HIGH",
+      "subject_ref": "LEG-001A",
+      "reason_code": "ACK_LEASE_EXPIRED",
+      "reason": "Acknowledgement was not observed by the deadline.",
+      "evidence_refs": [
+        "evt_175c1bc3e1b0d5c93c52",
+        "lease_461c0951b801f0b3cb91"
       ],
-      &amp;quot;action_recommended&amp;quot;: true
+      "action_recommended": true
     },
-    &amp;quot;action&amp;quot;: {
-      &amp;quot;action_id&amp;quot;: &amp;quot;action_466ec75356f6e57607ae&amp;quot;,
-      &amp;quot;action_type&amp;quot;: &amp;quot;notify&amp;quot;,
-      &amp;quot;target_ref&amp;quot;: &amp;quot;driver@example.com&amp;quot;,
-      &amp;quot;channel&amp;quot;: &amp;quot;mock&amp;quot;,
-      &amp;quot;objective&amp;quot;: &amp;quot;Request acknowledgement for an overdue operational assignment.&amp;quot;,
-      &amp;quot;message&amp;quot;: &amp;quot;Please acknowledge assignment TRIP-001:LEG-001A.&amp;quot;,
-      &amp;quot;require_ack&amp;quot;: true,
-      &amp;quot;urgency&amp;quot;: &amp;quot;HIGH&amp;quot;,
-      &amp;quot;source_finding_ids&amp;quot;: [
-        &amp;quot;finding_658c6b05f34a58be1c66&amp;quot;
+    "action": {
+      "action_id": "action_466ec75356f6e57607ae",
+      "action_type": "notify",
+      "target_ref": "driver@example.com",
+      "channel": "mock",
+      "objective": "Request acknowledgement for an overdue operational assignment.",
+      "message": "Please acknowledge assignment TRIP-001:LEG-001A.",
+      "require_ack": true,
+      "urgency": "HIGH",
+      "source_finding_ids": [
+        "finding_658c6b05f34a58be1c66"
       ],
-      &amp;quot;authority_context&amp;quot;: {
-        &amp;quot;communication_allowed&amp;quot;: true,
-        &amp;quot;channel&amp;quot;: &amp;quot;mock&amp;quot;
+      "authority_context": {
+        "communication_allowed": true,
+        "channel": "mock"
       },
-      &amp;quot;metadata&amp;quot;: {}
+      "metadata": {}
     },
-    &amp;quot;result&amp;quot;: {
-      &amp;quot;action_id&amp;quot;: &amp;quot;action_466ec75356f6e57607ae&amp;quot;,
-      &amp;quot;provider&amp;quot;: &amp;quot;mock&amp;quot;,
-      &amp;quot;provider_ref&amp;quot;: &amp;quot;mock-ref-001&amp;quot;,
-      &amp;quot;status&amp;quot;: &amp;quot;ACKNOWLEDGED&amp;quot;,
-      &amp;quot;acknowledged&amp;quot;: true,
-      &amp;quot;response&amp;quot;: &amp;quot;Acknowledged by driver&amp;quot;,
-      &amp;quot;started_at&amp;quot;: &amp;quot;2026-09-10T13:56:00Z&amp;quot;,
-      &amp;quot;completed_at&amp;quot;: &amp;quot;2026-09-10T13:56:05Z&amp;quot;,
-      &amp;quot;error_code&amp;quot;: null,
-      &amp;quot;evidence_refs&amp;quot;: [],
-      &amp;quot;provider_accepted&amp;quot;: true,
-      &amp;quot;delivery&amp;quot;: &amp;quot;KNOWN&amp;quot;,
-      &amp;quot;reached_ringing&amp;quot;: &amp;quot;TRUE&amp;quot;,
-      &amp;quot;terminal_cause&amp;quot;: &amp;quot;ACKNOWLEDGED&amp;quot;,
-      &amp;quot;retry_safe&amp;quot;: &amp;quot;FALSE&amp;quot;
+    "result": {
+      "action_id": "action_466ec75356f6e57607ae",
+      "provider": "mock",
+      "provider_ref": "mock-ref-001",
+      "status": "ACKNOWLEDGED",
+      "acknowledged": true,
+      "response": "Acknowledged by driver",
+      "started_at": "2026-09-10T13:56:00Z",
+      "completed_at": "2026-09-10T13:56:05Z",
+      "error_code": null,
+      "evidence_refs": [],
+      "provider_accepted": true,
+      "delivery": "KNOWN",
+      "reached_ringing": "TRUE",
+      "terminal_cause": "ACKNOWLEDGED",
+      "retry_safe": "FALSE"
     }
   },
-  &amp;quot;component_sha256&amp;quot;: {
-    &amp;quot;event&amp;quot;: &amp;quot;8cd5251a834feee18d4a5090d7e1d9784a18caad60fefcb8cb8deadc5d38d591&amp;quot;,
-    &amp;quot;lease&amp;quot;: &amp;quot;96031a308a847fcd93bc2d027108fe802d9d5dee66acfef8ff164143b6679442&amp;quot;,
-    &amp;quot;finding&amp;quot;: &amp;quot;b208c200f62fb3d37fb70cd8e56497526e09db2caa02bd80f41be7770cda5d2b&amp;quot;,
-    &amp;quot;action&amp;quot;: &amp;quot;43f3c02dd7b22e90eeac6666cb83b0fe73af8e7589fecbd854ae064e6df1954c&amp;quot;,
-    &amp;quot;result&amp;quot;: &amp;quot;77aeba8043aff5c89a131d6b221f46db384eaae16ff3e08b3ed4397724073178&amp;quot;
+  "component_sha256": {
+    "event": "8cd5251a834feee18d4a5090d7e1d9784a18caad60fefcb8cb8deadc5d38d591",
+    "lease": "96031a308a847fcd93bc2d027108fe802d9d5dee66acfef8ff164143b6679442",
+    "finding": "b208c200f62fb3d37fb70cd8e56497526e09db2caa02bd80f41be7770cda5d2b",
+    "action": "43f3c02dd7b22e90eeac6666cb83b0fe73af8e7589fecbd854ae064e6df1954c",
+    "result": "77aeba8043aff5c89a131d6b221f46db384eaae16ff3e08b3ed4397724073178"
   },
-  &amp;quot;previous_receipt_sha256&amp;quot;: null,
-  &amp;quot;limitations&amp;quot;: [
-    &amp;quot;Integrity verification does not replay external provider behavior.&amp;quot;,
-    &amp;quot;An unanchored append-only chain cannot detect tail truncation.&amp;quot;
+  "previous_receipt_sha256": null,
+  "limitations": [
+    "Integrity verification does not replay external provider behavior.",
+    "An unanchored append-only chain cannot detect tail truncation."
   ],
-  &amp;quot;receipt_sha256&amp;quot;: &amp;quot;bb098d54cca0aaa77916284b3ba5a0d33ef4dad269d105d70871758dd8df09e0&amp;quot;
+  "receipt_sha256": "bb098d54cca0aaa77916284b3ba5a0d33ef4dad269d105d70871758dd8df09e0"
 }</script>
 
 <script>
 // ============================================================
-// OTP EVIDENCE VIEWER — VERIFICATION LOGIC
+// OTP EVIDENCE VIEWER — UI = projection(receipt)
 // ============================================================
 
 const originalRecord = JSON.parse(document.getElementById('otp-evidence').textContent);
@@ -1005,6 +783,175 @@ async function sha256(value) {
     return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Safe getters
+function g(obj, ...keys) {
+    let cur = obj;
+    for (const k of keys) {
+        if (cur == null || typeof cur !== 'object') return undefined;
+        cur = cur[k];
+    }
+    return cur;
+}
+
+function fmt(val) {
+    if (val === undefined || val === null) return '—';
+    if (typeof val === 'boolean') return val ? 'Yes' : 'No';
+    return String(val);
+}
+
+function fmtClass(val, prefix) {
+    const s = String(val || 'NONE').replace(/[^A-Z0-9_]/gi, '-').toUpperCase();
+    return prefix + s;
+}
+
+// Render all visible fields from the receipt JSON
+function renderFields() {
+    const r = currentRecord;
+    const c = r.components || {};
+
+    // Title bar
+    document.getElementById('v-execution-id').textContent = fmt(r.execution_id);
+
+    // Overview
+    document.getElementById('v-exec-id').textContent = fmt(r.execution_id);
+    document.getElementById('v-source-adapter').textContent = fmt(r.source_adapter);
+    document.getElementById('v-policy-version').textContent = fmt(r.policy_version);
+    document.getElementById('v-channel').textContent = fmt(r.channel_adapter);
+
+    // Verdict
+    const verdict = r.verdict || g(c, 'finding', 'status') || 'UNKNOWN';
+    const vEl = document.getElementById('v-verdict');
+    vEl.textContent = fmt(verdict);
+    vEl.className = 'field-value status-' + String(verdict).replace(/[^A-Z0-9]/gi, '-').toUpperCase();
+
+    // Finding overview
+    const f = c.finding || {};
+    const fStatus = f.status;
+    const fsEl = document.getElementById('v-finding-status');
+    fsEl.textContent = fmt(fStatus);
+    fsEl.className = 'field-value ' + fmtClass(fStatus, 'status-');
+
+    document.getElementById('v-finding-reason-code').textContent = fmt(f.reason_code);
+
+    const fSev = f.severity;
+    const fvEl = document.getElementById('v-finding-severity');
+    fvEl.textContent = fmt(fSev);
+    fvEl.className = 'field-value ' + fmtClass(fSev, 'severity-');
+
+    document.getElementById('v-finding-action-rec').textContent = fmt(f.action_recommended);
+
+    // Receipt hashes
+    document.getElementById('receipt-hash').textContent = fmt(r.receipt_sha256);
+    document.getElementById('v-prev-receipt').textContent = fmt(r.previous_receipt_sha256);
+
+    // Event tab
+    const ev = c.event || {};
+    document.getElementById('v-event-id').textContent = fmt(ev.event_id);
+    document.getElementById('v-event-source').textContent = fmt(ev.source);
+    document.getElementById('v-event-type').textContent = fmt(ev.source_event_type);
+    document.getElementById('v-event-source-ref').textContent = fmt(ev.source_ref);
+    document.getElementById('v-event-entity-type').textContent = fmt(ev.entity_type);
+    document.getElementById('v-event-entity-id').textContent = fmt(ev.entity_id);
+    document.getElementById('v-event-observed-at').textContent = fmt(ev.observed_at);
+    document.getElementById('v-event-payload-sha').textContent = fmt(ev.payload_sha256);
+
+    const payload = ev.payload;
+    document.getElementById('v-event-payload').textContent =
+        payload ? JSON.stringify(payload, null, 2) : '—';
+
+    // Finding tab (detail)
+    document.getElementById('v-finding-id').textContent = fmt(f.finding_id);
+    document.getElementById('v-finding-rule-id').textContent = fmt(f.rule_id);
+
+    const fs2El = document.getElementById('v-finding-status2');
+    fs2El.textContent = fmt(fStatus);
+    fs2El.className = 'field-value ' + fmtClass(fStatus, 'status-');
+
+    const fs2vEl = document.getElementById('v-finding-severity2');
+    fs2vEl.textContent = fmt(fSev);
+    fs2vEl.className = 'field-value ' + fmtClass(fSev, 'severity-');
+
+    document.getElementById('v-finding-subject').textContent = fmt(f.subject_ref);
+    document.getElementById('v-finding-reason-code2').textContent = fmt(f.reason_code);
+    document.getElementById('v-finding-reason').textContent = fmt(f.reason);
+    document.getElementById('v-finding-action-rec2').textContent = fmt(f.action_recommended);
+    document.getElementById('v-finding-evidence-refs').textContent =
+        fmt(f.evidence_refs);
+
+    // Action tab
+    const act = c.action || {};
+    document.getElementById('v-action-id').textContent = fmt(act.action_id);
+    document.getElementById('v-action-type').textContent = fmt(act.action_type);
+    document.getElementById('v-action-target').textContent = fmt(act.target_ref);
+    document.getElementById('v-action-channel').textContent = fmt(act.channel);
+    document.getElementById('v-action-urgency').textContent = fmt(act.urgency);
+    document.getElementById('v-action-objective').textContent = fmt(act.objective);
+    document.getElementById('v-action-message').textContent = fmt(act.message);
+    document.getElementById('v-action-require-ack').textContent = fmt(act.require_ack);
+
+    // Result tab
+    const res = c.result || {};
+    document.getElementById('v-result-provider').textContent = fmt(res.provider);
+    document.getElementById('v-result-provider-ref').textContent = fmt(res.provider_ref);
+    document.getElementById('v-result-status').textContent = fmt(res.status);
+    document.getElementById('v-result-acknowledged').textContent = fmt(res.acknowledged);
+    document.getElementById('v-result-delivery').textContent = fmt(res.delivery);
+    document.getElementById('v-result-reached-ringing').textContent = fmt(res.reached_ringing);
+    document.getElementById('v-result-terminal-cause').textContent = fmt(res.terminal_cause);
+    document.getElementById('v-result-started-at').textContent = fmt(res.started_at);
+    document.getElementById('v-result-completed-at').textContent = fmt(res.completed_at);
+    document.getElementById('v-result-response').textContent = fmt(res.response);
+
+    // Component hashes
+    const ch = r.component_hashes || {};
+    document.getElementById('v-sha-finding').textContent = fmt(ch.finding);
+    document.getElementById('v-sha-action').textContent = fmt(ch.action);
+    document.getElementById('v-sha-result').textContent = fmt(ch.result);
+
+    // Components tab — raw JSON per component
+    const compMap = [
+        ['event', 'event'],
+        ['lease', 'lease'],
+        ['finding', 'finding'],
+        ['action', 'action'],
+        ['result', 'result'],
+    ];
+    compMap.forEach(([key, jsonKey]) => {
+        const el = document.getElementById('v-comp-json-' + key);
+        const sha = document.getElementById('v-comp-sha-' + key);
+        const data = c[jsonKey];
+        const hash = ch[jsonKey];
+        el.textContent = data ? JSON.stringify(data, null, 2) : '—';
+        sha.textContent = fmt(hash);
+    });
+
+    // Raw JSON tab
+    document.getElementById('v-raw-json').textContent = JSON.stringify(r, null, 2);
+
+    // Status bar
+    document.getElementById('v-schema').textContent = fmt(r.schema_version);
+    const compCount = Object.keys(ch).length;
+    document.getElementById('v-component-count').textContent = compCount || '—';
+}
+
+// Tab switching
+function switchTab(name) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.querySelectorAll('.tab').forEach(el => {
+        if (el.textContent.toLowerCase() === name) el.classList.add('active');
+    });
+}
+
+// Component toggle
+function toggleComponent(id) {
+    const body = document.getElementById(id);
+    const arrow = document.getElementById('arrow-' + id);
+    body.classList.toggle('open');
+    arrow.textContent = body.classList.contains('open') ? '▼' : '▶';
+}
+
 // Verify receipt integrity
 async function verifyReceipt() {
     const resultEl = document.getElementById('verify-result');
@@ -1023,119 +970,118 @@ async function verifyReceipt() {
         const computed = await sha256(body);
         const valid = computed === currentRecord.receipt_sha256;
 
-        // Verify component hashes
-        const components = currentRecord.components || {};
-        const compHashes = currentRecord.component_sha256 || {};
-        const componentResults = {};
-
-        for (const [name, comp] of Object.entries(components)) {
-            const expected = compHashes[name];
-            if (expected && comp) {
-                const actual = await sha256(comp);
-                componentResults[name] = { valid: actual === expected, expected, actual };
+        // Compute component hashes from components object
+        const comps = currentRecord.components || {};
+        const ch = currentRecord.component_hashes || {};
+        const compResults = [];
+        for (const [key, data] of Object.entries(comps)) {
+            if (data && typeof data === 'object') {
+                const hash = await sha256(data);
+                const expected = ch[key];
+                compResults.push({
+                    name: key,
+                    hash: hash,
+                    expected: expected,
+                    match: expected ? hash === expected : null,
+                });
             }
         }
 
-        const allComponentsValid = Object.values(componentResults).every(r => r.valid);
-
-        if (valid && allComponentsValid) {
-            resultEl.className = 'verify-result verify-valid';
-            resultEl.innerHTML = `
-                <div style="font-size: 14px; margin-bottom: 8px;">✅ RECEIPT VALID</div>
-                <div>Receipt SHA-256: <span class="sha256">${computed}</span></div>
-                <div style="margin-top: 4px;">All ${Object.keys(componentResults).length} component hashes verified.</div>
-            `;
-            statusEl.textContent = '✅ VALID — All hashes match';
-        } else {
-            let html = '<div style="font-size: 14px; margin-bottom: 8px;">❌ VERIFICATION FAILED</div>';
-
-            if (!valid) {
-                html += `<div>Receipt hash mismatch:<br>`;
-                html += `Expected: <span class="sha256">${currentRecord.receipt_sha256}</span><br>`;
-                html += `Computed: <span class="sha256">${computed}</span></div>`;
-            }
-
-            for (const [name, result] of Object.entries(componentResults)) {
-                if (!result.valid) {
-                    html += `<div style="margin-top: 4px;">Component "${name}" hash mismatch:<br>`;
-                    html += `Expected: <span class="sha256">${result.expected}</span><br>`;
-                    html += `Computed: <span class="sha256">${result.actual}</span></div>`;
+        // Also verify ledger if present
+        let ledgerValid = null;
+        if (currentRecord.ledger && currentRecord.ledger.length > 0) {
+            let chainValid = true;
+            for (let i = 1; i < currentRecord.ledger.length; i++) {
+                if (currentRecord.ledger[i].previous_receipt_sha256 !==
+                    currentRecord.ledger[i-1].receipt_sha256) {
+                    chainValid = false;
+                    break;
                 }
             }
-
-            resultEl.className = 'verify-result verify-invalid';
-            resultEl.innerHTML = html;
-            statusEl.textContent = '❌ INVALID — Hash mismatch';
+            ledgerValid = chainValid;
         }
-    } catch (e) {
+
+        let html = '<div style="margin-bottom: 8px;">';
+        html += '<strong>Receipt hash: </strong>';
+        if (valid) {
+            html += '<span style="color: #006400;">VALID</span>';
+            html += ' — ' + computed.substring(0, 32) + '...';
+        } else {
+            html += '<span style="color: #8B0000;">INVALID</span>';
+            html += '<br>Computed: ' + computed;
+            html += '<br>Expected: ' + currentRecord.receipt_sha256;
+        }
+        html += '</div>';
+
+        html += '<div style="margin-bottom: 8px;"><strong>Components:</strong></div>';
+        html += '<table style="border-collapse: collapse; width: 100%;">';
+        compResults.forEach(r => {
+            const color = r.match === true ? '#006400' :
+                         r.match === false ? '#8B0000' : '#666';
+            const label = r.match === true ? 'MATCH' :
+                         r.match === false ? 'MISMATCH' : 'NO EXPECTED';
+            html += '<tr style="border-bottom: 1px solid #DDD;">';
+            html += '<td style="padding: 2px 8px;">' + r.name + '</td>';
+            html += '<td style="padding: 2px 8px; font-family: monospace; font-size: 9px;">' +
+                    r.hash.substring(0, 32) + '...</td>';
+            html += '<td style="padding: 2px 8px; color: ' + color + '; font-weight: bold;">' +
+                    label + '</td>';
+            html += '</tr>';
+        });
+        html += '</table>';
+
+        if (ledgerValid !== null) {
+            html += '<div style="margin-top: 8px;">';
+            html += '<strong>Ledger chain: </strong>';
+            html += ledgerValid ?
+                '<span style="color: #006400;">VALID</span> — all links intact' :
+                '<span style="color: #8B0000;">BROKEN</span> — chain discontinuity detected';
+            html += '</div>';
+        }
+
+        resultEl.innerHTML = html;
+        resultEl.className = 'verify-result ' + (valid ? 'verify-valid' : 'verify-invalid');
+        statusEl.textContent = valid ? 'VALID — All hashes match' : 'INVALID — Hash mismatch';
+
+    } catch (err) {
+        resultEl.innerHTML = '<span style="color: #8B0000;">ERROR: ' + err.message + '</span>';
         resultEl.className = 'verify-result verify-invalid';
-        resultEl.innerHTML = `<div>❌ ERROR: ${e.message}</div>`;
-        statusEl.textContent = '❌ ERROR';
+        statusEl.textContent = 'Error: ' + err.message;
     }
 }
 
-// Tab switching
-function switchTab(name) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
-    document.getElementById('tab-' + name).classList.add('active');
-}
-
-// Component expand/collapse
-function toggleComponent(id) {
-    const el = document.getElementById(id);
-    const arrow = document.getElementById('arrow-' + id);
-    el.classList.toggle('open');
-    arrow.textContent = el.classList.contains('open') ? '▼' : '▶';
-}
-
-// Download evidence
+// Download evidence as JSON
 function downloadEvidence() {
     const blob = new Blob([JSON.stringify(currentRecord, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = currentRecord.execution_id + '.json';
+    a.download = (currentRecord.execution_id || 'evidence') + '.json';
     a.click();
     URL.revokeObjectURL(url);
 }
 
-// Copy hash
-function copyHash() {
-    navigator.clipboard.writeText(currentRecord.receipt_sha256);
-    document.getElementById('status-verify').textContent = '📋 Hash copied!';
-    setTimeout(() => {
-        document.getElementById('status-verify').textContent = 'Ready';
-    }, 2000);
-}
-
-// Theme toggle (light mode)
-let darkTheme = true;
-function toggleTheme() {
-    darkTheme = !darkTheme;
-    if (darkTheme) {
-        document.body.style.background = '#ECE9D8';
-        document.querySelectorAll('.component-body pre, .tab-content pre').forEach(el => {
-            el.style.background = '#FFF';
-            el.style.color = '#000';
-        });
-    } else {
-        document.body.style.background = '#1E1E1E';
-        document.querySelectorAll('.component-body pre, .tab-content pre').forEach(el => {
-            el.style.background = '#2D2D2D';
-            el.style.color = '#D4D4D4';
-        });
+// Copy receipt hash to clipboard
+async function copyHash() {
+    if (currentRecord.receipt_sha256) {
+        await navigator.clipboard.writeText(currentRecord.receipt_sha256);
+        const el = document.getElementById('status-verify');
+        el.textContent = 'Hash copied!';
+        setTimeout(() => { el.textContent = 'Ready'; }, 2000);
     }
 }
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'v' || e.key === 'V') verifyReceipt();
-    if (e.key === 'e' || e.key === 'E') downloadEvidence();
-    if (e.key === 'c' || e.key === 'C') copyHash();
+    if (e.ctrlKey && e.key === 'v') { e.preventDefault(); verifyReceipt(); }
+    if (e.ctrlKey && e.key === 's') { e.preventDefault(); downloadEvidence(); }
+    if (e.ctrlKey && e.key === 'c' && !window.getSelection().toString()) {
+        e.preventDefault(); copyHash();
+    }
 });
-</script>
 
+// Initial render — UI = projection(receipt)
+renderFields();
+</script>
 </body>
 </html>
