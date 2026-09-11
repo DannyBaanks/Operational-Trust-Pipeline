@@ -92,9 +92,13 @@ def create_app() -> Flask:
         if not request_id:
             return jsonify({"error": "missing request_id"}), 400
         with _store_lock:
+            # Duty actions (ACCEPT/ARRIVED/DEPARTED/...) are relay-level labels.
+            # They resolve to ACK/REJECT semantics so the OTP lease pipeline
+            # stays unchanged: acknowledged=True satisfies, False does not.
             _responses[request_id] = {
                 "request_id": request_id,
                 "acknowledged": body.get("acknowledged", False),
+                "action": body.get("action", "ACK" if body.get("acknowledged", False) else "REJECT"),
                 "message": body.get("message", ""),
                 "received_at": time.time(),
             }
