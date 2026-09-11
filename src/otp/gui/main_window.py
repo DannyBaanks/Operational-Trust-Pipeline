@@ -5,11 +5,11 @@ import json
 import time
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import Qt, Slot, QThread, Signal
 from PySide6.QtGui import QAction, QFont, QKeySequence
 from PySide6.QtWidgets import (
     QFileDialog, QHBoxLayout, QLabel, QMainWindow, QSplitter,
-    QStatusBar, QVBoxLayout, QWidget, QApplication,
+    QStatusBar, QVBoxLayout, QWidget, QApplication, QMessageBox,
 )
 
 from .styles import C, FONTS
@@ -20,6 +20,37 @@ from .workers import TripLoaderWorker, LanRelayWorker
 from .trip_model import TripItem, TripState, STATE_LABELS
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+class DriveSyncWorker(QThread):
+    """Background worker for Google Drive sync."""
+    finished = Signal(dict)
+    error = Signal(str)
+
+    def __init__(self, action: str, parent=None) -> None:
+        super().__init__(parent)
+        self._action = action
+
+    def run(self) -> None:
+        try:
+            from ..drive_sync import DriveSync
+            ds = DriveSync()
+            if self._action == "status":
+                self.finished.emit(ds.get_sync_status())
+            elif self._action == "sync":
+                evidence_dir = ROOT / "evidence"
+                ledger_path = evidence_dir / "ledger.jsonl"
+                results = []
+                if ledger_path.exists():
+                    results.append(ds.sync_ledger(ledger_path))
+                if evidence_dir.exists():
+                    results.extend(ds.sync_evidence_dir(evidence_dir))
+                self.finished.emit({"results": results})
+            elif self._action == "disconnect":
+                ds.disconnect()
+                self.finished.emit({"disconnected": True})
+        except Exception as e:
+            self.error.emit(str(e))
 
 
 class MainWindow(QMainWindow):
@@ -119,6 +150,28 @@ class MainWindow(QMainWindow):
 
         file_menu.addSeparator()
 
+        # Google Drive sync
+        drive_menu = menubar.addMenu("&Drive")
+
+        drive_auth_action = QAction("&Connect Google Account...", self)
+        drive_auth_action.triggered.connect(self._on_drive_auth)
+        drive_menu.addAction(drive_auth_action)
+
+        drive_sync_action = QAction("&Sync Evidence to Drive", self)
+        drive_sync_action.setShortcut(QKeySequence("Ctrl+Shift+S"))
+        drive_sync_action.triggered.connect(self._on_drive_sync)
+        drive_menu.addAction(drive_sync_action)
+
+        drive_status_action = QAction("Sync &Status", self)
+        drive_status_action.triggered.connect(self._on_drive_status)
+        drive_menu.addAction(drive_status_action)
+
+        drive_menu.addSeparator()
+
+        drive_disconnect_action = QAction("&Disconnect", self)
+        drive_disconnect_action.triggered.connect(self._on_drive_disconnect)
+        drive_menu.addAction(drive_disconnect_action)
+
         exit_action = QAction("E&xit", self)
         exit_action.setShortcut(QKeySequence.StandardKey.Quit)
         exit_action.triggered.connect(self.close)
@@ -168,6 +221,25 @@ class MainWindow(QMainWindow):
         self._status_bar = QStatusBar()
         self.setStatusBar(self._status_bar)
         self._status_bar.showMessage("Ready")
+
+        # Drive sync indicator
+        self._drive_label = QLabel("Drive: not connected")
+        self._drive_label.setStyleSheet(f"color: {C.GRAY}; font-size: 11px; margin-right: 8px;")
+        self._status_bar.addPermanentWidget(self._drive_label)
+
+        # Check Drive auth status on startup
+        self._check_drive_status()
+
+    def _check_drive_status(self) -> None:
+        """Check if Drive is authenticated on startup."""
+        try:
+            from ..drive_sync import DriveSync
+            ds = DriveSync()
+            if ds.is_authenticated():
+                self._drive_label.setText("Drive: connected")
+                self._drive_label.setStyleSheet(f"color: {C.GREEN}; font-size: 11px;")
+        except Exception:
+            pass
 
     # --- Data loading ---
 
@@ -348,3 +420,97 @@ class MainWindow(QMainWindow):
     def _on_open_docs(self) -> None:
         import os
         os.startfile(str(ROOT / "docs"))
+
+    def _on_drive_auth(self) -> None:
+        """Authenticate with Google Drive."""
+        from PySide6.QtWidgets import QInputDialog
+        email, ok = QInputDialog.getText(
+            self, "Google Drive",
+            "Enter your Google email to authenticate:\n\n"
+            "1. Go to console.cloud.google.com\n"
+            "2. Create project > Enable Drive API\n"
+            "3. Create OAuth2 credentials (Desktop app)\n"
+            "4. Download credentials.json to ~/.otp/credentials.json\n\n"
+            "Email:"
+        )
+        if ok and email:
+            self._drive_label.setText("Authenticating...")
+            self._drive_label.setStyleSheet(f"color: {C.BLUE}; font-size: 11px;")
+            worker = DriveSyncWorker("auth", self)
+            worker.finished.connect(lambda r: self._on_drive_auth_done(r, email))
+            worker.error.connect(self._on_drive_error)
+            self._drive_worker = worker
+            worker.start()
+
+    def _on_drive_auth_done(self, result: dict, email: str) -> None:
+        self._drive_label.setText(f"Drive: {email}")
+        self._drive_label.setStyleSheet(f"color: {C.GREEN}; font-size: 11px;")
+        self._status_bar.showMessage("Google Drive connected", 5000)
+
+    def _on_drive_sync(self) -> None:
+        """Sync evidence to Google Drive."""
+        self._drive_label.setText("Syncing...")
+        self._drive_label.setStyleSheet(f"color: {C.BLUE}; font-size: 11px;")
+        worker = DriveSyncWorker("sync", self)
+        worker.finished.connect(self._on_drive_sync_done)
+        worker.error.connect(self._on_drive_error)
+        self._drive_worker = worker
+        worker.start()
+
+    def _on_drive_sync_done(self, result: dict) -> None:
+        results = result.get("results", [])
+        uploaded = sum(1 for r in results if r.get("status") in ("created", "updated"))
+        unchanged = sum(1 for r in results if r.get("status") == "unchanged")
+        errors = sum(1 for r in results if r.get("status") == "error")
+        self._drive_label.setText(f"Drive: {uploaded} uploaded, {unchanged} unchanged")
+        self._drive_label.setStyleSheet(f"color: {C.GREEN}; font-size: 11px;")
+        msg = f"Synced: {uploaded} uploaded, {unchanged} unchanged"
+        if errors:
+            msg += f", {errors} errors"
+        self._status_bar.showMessage(msg, 5000)
+
+    def _on_drive_status(self) -> None:
+        """Show sync status."""
+        worker = DriveSyncWorker("status", self)
+        worker.finished.connect(self._on_drive_status_done)
+        worker.error.connect(self._on_drive_error)
+        self._drive_worker = worker
+        worker.start()
+
+    def _on_drive_status_done(self, status: dict) -> None:
+        from PySide6.QtWidgets import QMessageBox
+        auth = "Connected" if status.get("authenticated") else "Not connected"
+        count = status.get("upload_count", 0)
+        last = status.get("last_sync", "never")
+        QMessageBox.information(
+            self, "Drive Sync Status",
+            f"Status: {auth}\n"
+            f"Total uploads: {count}\n"
+            f"Last sync: {last}"
+        )
+
+    def _on_drive_disconnect(self) -> None:
+        """Disconnect from Google Drive."""
+        from PySide6.QtWidgets import QMessageBox
+        reply = QMessageBox.question(
+            self, "Disconnect Drive",
+            "Remove Google Drive connection?\n"
+            "Local evidence is not affected.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            worker = DriveSyncWorker("disconnect", self)
+            worker.finished.connect(lambda: self._on_drive_disconnected())
+            worker.error.connect(self._on_drive_error)
+            self._drive_worker = worker
+            worker.start()
+
+    def _on_drive_disconnected(self) -> None:
+        self._drive_label.setText("Drive: not connected")
+        self._drive_label.setStyleSheet(f"color: {C.GRAY}; font-size: 11px;")
+        self._status_bar.showMessage("Google Drive disconnected", 3000)
+
+    def _on_drive_error(self, error: str) -> None:
+        self._drive_label.setText("Drive: error")
+        self._drive_label.setStyleSheet(f"color: {C.RED}; font-size: 11px;")
+        self._status_bar.showMessage(f"Drive error: {error}", 5000)

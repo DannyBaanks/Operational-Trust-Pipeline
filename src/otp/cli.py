@@ -46,6 +46,14 @@ def main() -> int:
     ledger_sub = ledger.add_subparsers(dest="ledger_command", required=True)
     lv = ledger_sub.add_parser("verify")
     lv.add_argument("ledger")
+    drive = sub.add_parser("drive")
+    drive_sub = drive.add_subparsers(dest="drive_command", required=True)
+    drive_sub.add_parser("auth")
+    drive_sub.add_parser("status")
+    ds = drive_sub.add_parser("sync")
+    ds.add_argument("--evidence-dir", type=Path)
+    ds.add_argument("--ledger", type=Path)
+    drive_sub.add_parser("disconnect")
     args = parser.parse_args()
     if args.command == "gui":
         from .gui import main as gui_main
@@ -86,6 +94,36 @@ def main() -> int:
         ok, reason = verify_ledger(Path(args.ledger))
         print(reason)
         return 0 if ok else 1
+    if args.command == "drive":
+        from .drive_sync import DriveSync
+        ds = DriveSync()
+        if args.drive_command == "auth":
+            email = ds.authenticate()
+            print(json.dumps({"authenticated": True, "email": email}, sort_keys=True))
+            return 0
+        if args.drive_command == "status":
+            status = ds.get_sync_status()
+            print(json.dumps(status, sort_keys=True))
+            return 0
+        if args.drive_command == "sync":
+            results = []
+            if args.ledger:
+                results.append(ds.sync_ledger(args.ledger))
+            if args.evidence_dir:
+                results.extend(ds.sync_evidence_dir(args.evidence_dir))
+            if not results:
+                evidence_dir = ROOT / "evidence"
+                ledger_path = evidence_dir / "ledger.jsonl"
+                if ledger_path.exists():
+                    results.append(ds.sync_ledger(ledger_path))
+                if evidence_dir.exists():
+                    results.extend(ds.sync_evidence_dir(evidence_dir))
+            print(json.dumps(results, sort_keys=True))
+            return 0
+        if args.drive_command == "disconnect":
+            ds.disconnect()
+            print(json.dumps({"disconnected": True}))
+            return 0
     data = json.loads(Path(args.receipt).read_text())
     ok, reason = verify_receipt(data)
     print(reason)
