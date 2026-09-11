@@ -31,7 +31,7 @@ except ImportError:
 # ============================================================
 
 WIDTH, HEIGHT = 1280, 720
-FPS = 30
+FPS = 15
 BG_COLOR = (236, 233, 216)  # XP gray #ECE9D8
 TITLE_BG = (10, 36, 106)    # XP blue #0A246A
 WHITE = (255, 255, 255)
@@ -450,7 +450,7 @@ def scene_summary(duration=22.0):
         ("Domain Parity", "Python == C semantics"),
         ("Evidence Viewer", "Windows XP aesthetic, offline HTML"),
         ("SHA-256 Verification", "Web Crypto API, browser-side"),
-        ("114 Tests", "107 persistence + 7 parity"),
+        ("156 Tests", "persistence + parity + RoadStar surface"),
     ]
 
     for i in range(n_frames):
@@ -487,6 +487,171 @@ def scene_summary(duration=22.0):
 
         frames.append(img)
 
+    return frames
+
+
+def scene_dock_collision(duration=36.0):
+    """RoadStar Dock/HOS Collision timeline."""
+    frames = []
+    n_frames = int(duration * FPS)
+    font_title = get_font(20, bold=True)
+    font_label = get_font(14, bold=True)
+    font_value = get_font(12)
+    font_small = get_font(10)
+
+    samples = [
+        ("08:00", "Milton terminal", 82, 0, 8.0, None),
+        ("08:20", "En route 401", 78, 0, 7.7, None),
+        ("08:40", "401 SLOWDOWN", 22, 0, 7.4, "401_SLOWDOWN"),
+        ("09:00", "401 SLOWDOWN", 18, 0, 7.1, "401_SLOWDOWN"),
+        ("09:20", "Near London", 62, 0, 6.8, None),
+        ("09:30", "Approaching dock", 12, 0, 6.6, None),
+        ("09:40", "GEOFENCE ENTER", 0, 0, 2.4, "DOCK_ARRIVAL"),
+        ("10:40", "Dock wait 60m", 0, 60, 1.4, "DOCK_WAIT"),
+        ("11:40", "DETENTION >2h", 0, 120, 0.4, "DETENTION_THRESHOLD"),
+        ("12:00", "HOS COLLISION", 0, 140, 0.0, "HOS_COLLISION"),
+        ("12:10", "DEPARTED", 15, 140, 0.0, "DOCK_DEPARTURE"),
+    ]
+
+    for i in range(n_frames):
+        img = Image.new("RGB", (WIDTH, HEIGHT), BG_COLOR)
+        draw = ImageDraw.Draw(img)
+        draw.rectangle([0, 0, WIDTH, 32], fill=TITLE_BG)
+        draw.text((8, 8), "RoadStar — Dock/HOS Collision", fill=WHITE, font=font_title)
+
+        progress = min(len(samples) - 1, int((i / n_frames) * len(samples)))
+        # Timeline
+        y = 120
+        x0, x1 = 80, WIDTH - 80
+        draw.line([(x0, y), (x1, y)], fill=DARK_GRAY, width=3)
+        for k, (t, label, speed, dock, hos, ev) in enumerate(samples):
+            x = x0 + (x1 - x0) * k / (len(samples) - 1)
+            color = LIGHT_GRAY
+            if k <= progress:
+                color = RED if ev in ("HOS_COLLISION", "DETENTION_THRESHOLD") else (
+                    ORANGE if ev in ("401_SLOWDOWN", "DOCK_WAIT") else GREEN)
+            draw.ellipse([x - 8, y - 8, x + 8, y + 8], fill=color, outline=DARK_GRAY)
+            if k == progress:
+                draw.text((x - 20, y + 14), t, fill=BLACK, font=font_small)
+
+        # Current sample detail
+        t, label, speed, dock, hos, ev = samples[progress]
+        draw_xp_window(draw, "Telemetry — " + t, 100, 200, WIDTH - 200, 300)
+        rows = [
+            ("Position:", label),
+            ("Speed:", f"{speed} km/h"),
+            ("Dock wait:", f"{dock} min"),
+            ("On-duty remaining:", f"{hos:.1f} h"),
+            ("Scenario:", ev or "EN ROUTE"),
+        ]
+        for k, (name, val) in enumerate(rows):
+            fy = 240 + k * 30
+            draw.text((130, fy), name, fill=BLUE, font=font_label)
+            c = RED if (name == "Scenario:" and ev in ("HOS_COLLISION", "DETENTION_THRESHOLD")) else BLACK
+            draw.text((330, fy), val, fill=c, font=font_value)
+
+        if progress >= 9:
+            draw.rectangle([WIDTH // 2 - 220, 420, WIDTH // 2 + 220, 460], fill=RED)
+            draw.text((WIDTH // 2 - 200, 430), "HOS EXHAUSTED IN DOCK QUEUE", fill=WHITE, font=font_label)
+
+        draw.rectangle([0, HEIGHT - 24, WIDTH, HEIGHT], fill=LIGHT_GRAY)
+        draw.text((8, HEIGHT - 20), f"Scene: Dock/HOS Collision | Sample {progress + 1}/{len(samples)}",
+                  fill=DARK_GRAY, font=font_small)
+        frames.append(img)
+    return frames
+
+
+def scene_geofence_detention(duration=32.0):
+    """Geofence timestamps and detention billing."""
+    frames = []
+    n_frames = int(duration * FPS)
+    font_title = get_font(20, bold=True)
+    font_label = get_font(14, bold=True)
+    font_value = get_font(12)
+    font_small = get_font(10)
+    font_code = get_font(11)
+
+    for i in range(n_frames):
+        img = Image.new("RGB", (WIDTH, HEIGHT), BG_COLOR)
+        draw = ImageDraw.Draw(img)
+        draw.rectangle([0, 0, WIDTH, 32], fill=TITLE_BG)
+        draw.text((8, 8), "Geofence + Detention Billing (>2h free)", fill=WHITE, font=font_title)
+
+        draw_xp_window(draw, "London DC — Visit", 100, 60, WIDTH - 200, 220)
+        fields = [
+            ("ENTERED:", "2026-09-12T09:40:00Z"),
+            ("DEPARTED:", "2026-09-12T12:10:00Z"),
+            ("Dock wait:", "150 min"),
+            ("Free allowance:", "120 min"),
+        ]
+        for k, (name, val) in enumerate(fields):
+            fy = 95 + k * 30
+            draw.text((130, fy), name, fill=BLUE, font=font_label)
+            draw.text((330, fy), val, fill=BLACK, font=font_value)
+
+        # Animated wait bar
+        wait = min(150, int((i / n_frames) * 160))
+        billable = max(0, wait - 120)
+        bx, by, bw, bh = 130, 320, WIDTH - 260, 28
+        draw.rectangle([bx, by, bx + bw, by + bh], fill=WHITE, outline=DARK_GRAY)
+        free_w = bw * min(wait, 120) / 150
+        bill_w = bw * billable / 150
+        draw.rectangle([bx, by, bx + free_w, by + bh], fill=GREEN)
+        draw.rectangle([bx + free_w, by, bx + free_w + bill_w, by + bh], fill=RED)
+        draw.text((bx, by + 34), f"wait {wait} min — free 120 min — billable {billable} min",
+                  fill=BLACK, font=font_value)
+
+        if billable > 0:
+            charge = round(billable / 60 * 75.0, 2)
+            draw.rectangle([WIDTH // 2 - 160, 400, WIDTH // 2 + 160, 444], fill=(255, 250, 205), outline=DARK_GRAY)
+            draw.text((WIDTH // 2 - 140, 412), f"DETENTION: {billable} min = ${charge:.2f} CAD",
+                      fill=BLACK, font=font_label)
+
+        draw.rectangle([0, HEIGHT - 24, WIDTH, HEIGHT], fill=LIGHT_GRAY)
+        draw.text((8, HEIGHT - 20), "Scene: Geofence/Detention | 2h free, excess billed",
+                  fill=DARK_GRAY, font=font_small)
+        frames.append(img)
+    return frames
+
+
+def scene_load_match(duration=28.0):
+    """Return-load ranking for the London truck."""
+    frames = []
+    n_frames = int(duration * FPS)
+    font_title = get_font(20, bold=True)
+    font_label = get_font(14, bold=True)
+    font_value = get_font(12)
+    font_small = get_font(10)
+
+    candidates = [
+        ("409385-AA", "MILTON → KITCHENER", "31,400 lbs", "deadhead 99 km", True),
+        ("409339-AA", "WHITBY → KITCHENER", "35,983 lbs", "deadhead 208 km", True),
+        ("409090", "LONDON → LONDON", "24,894 lbs", "deadhead 0 km", True),
+    ]
+
+    for i in range(n_frames):
+        img = Image.new("RGB", (WIDTH, HEIGHT), BG_COLOR)
+        draw = ImageDraw.Draw(img)
+        draw.rectangle([0, 0, WIDTH, 32], fill=TITLE_BG)
+        draw.text((8, 8), "Load Matching — Deadhead Reduction", fill=WHITE, font=font_title)
+        draw.text((8, 40), "Truck in LONDON after delivery · dry van · 45,000 lbs · 8.0 h HOS",
+                  fill=DARK_GRAY, font=font_value)
+
+        y = 90
+        visible = min(len(candidates), int((i / n_frames) * (len(candidates) + 1)))
+        for k in range(visible):
+            bid, route, weight, reason, ok = candidates[k]
+            draw.rectangle([60, y, WIDTH - 60, y + 90], fill=WHITE, outline=DARK_GRAY)
+            draw.text((80, y + 8), f"#{k + 1}  {bid}", fill=BLUE, font=font_label)
+            draw.text((80, y + 32), route, fill=BLACK, font=font_value)
+            draw.text((80, y + 54), f"{weight} · {reason}", fill=DARK_GRAY, font=font_small)
+            draw_badge(draw, WIDTH - 180, y + 8, "MATCH", GREEN, font_small)
+            y += 104
+
+        draw.rectangle([0, HEIGHT - 24, WIDTH, HEIGHT], fill=LIGHT_GRAY)
+        draw.text((8, HEIGHT - 20), "Scene: Load Match | dispatcher decides, OTP never auto-assigns",
+                  fill=DARK_GRAY, font=font_small)
+        frames.append(img)
     return frames
 
 
@@ -537,23 +702,34 @@ def main():
     print("=" * 40)
 
     # Generate scenes
-    print("\n[1/5] Generating title scene...")
+    print("\n[1/8] Generating title scene...")
     title_frames = scene_title(8.0)
 
-    print("[2/5] Generating pipeline scene...")
+    print("[2/8] Generating pipeline scene...")
     pipeline_frames = scene_pipeline(24.0)
 
-    print("[3/5] Generating viewer scene...")
-    viewer_frames = scene_viewer(36.0)
+    print("[3/8] Generating viewer scene...")
+    viewer_frames = scene_viewer(28.0)
 
-    print("[4/5] Generating domain parity scene...")
-    parity_frames = scene_domain_parity(30.0)
+    print("[4/8] Generating Dock/HOS Collision scene...")
+    collision_frames = scene_dock_collision(36.0)
 
-    print("[5/5] Generating summary scene...")
+    print("[5/8] Generating geofence/detention scene...")
+    detention_frames = scene_geofence_detention(32.0)
+
+    print("[6/8] Generating load-match scene...")
+    match_frames = scene_load_match(28.0)
+
+    print("[7/8] Generating domain parity scene...")
+    parity_frames = scene_domain_parity(24.0)
+
+    print("[8/8] Generating summary scene...")
     summary_frames = scene_summary(22.0)
 
     # Concatenate all frames
-    all_frames = title_frames + pipeline_frames + viewer_frames + parity_frames + summary_frames
+    all_frames = (title_frames + pipeline_frames + viewer_frames +
+                  collision_frames + detention_frames + match_frames +
+                  parity_frames + summary_frames)
     total_duration = len(all_frames) / FPS
     print(f"\nTotal: {len(all_frames)} frames, {total_duration:.1f}s")
 

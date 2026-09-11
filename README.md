@@ -11,7 +11,7 @@ RoadStar data → normalize → evaluate → lease/policy → Sentinel → actio
 ## Quick Start
 
 ```bash
-# Run tests (114 passed, 1 skipped locally)
+# Run tests (156 passed, 1 skipped locally)
 py -m pytest -q
 
 # Deterministic demo (mock channel, no network, persists to ~/.otp/otp.db)
@@ -187,6 +187,10 @@ src/otp/
 │                           # + pure helpers: make_ack_lease, evaluate_ack, resolve_ack_lease
 ├── evidence.py             # Receipt + ledger (SHA-256 chained)
 ├── roadstar.py             # RoadStar workbook adapter (Dispatch + Driver)
+├── roadstar_simulator.py   # Deterministic Milton→London telemetry (seed 17)
+├── roadstar_geofence.py    # Geofence tracker + detention billing + visit store
+├── roadstar_hos.py         # Canadian HOS decision support (13/14/16/10/cycles)
+├── roadstar_matching.py    # Deterministic Tlorder return-load ranking
 ├── channels.py             # MockChannel, DummyChannel, LanChannel, CalleChannel
 ├── drive_sync.py           # Google Drive sync (OAuth2 + upload + conflict detection)
 ├── runner.py               # OperationalRunner — lifecycle orchestration + persistence
@@ -209,13 +213,14 @@ src/otp/
 │   ├── styles.py           # Dark theme
 │   └── icons.py            # State indicator icons
 └── templates/
-    └── lan_receiver.html   # Mobile alert page
+    ├── lan_receiver.html   # Mobile alert page (ACK + duty actions)
+    └── dispatch_map.html   # Leaflet dispatch map (streets/satellite)
 ```
 
 ## Tests
 
 ```bash
-py -m pytest -q          # local result: 114 passed, 1 skipped
+py -m pytest -q          # local result: 156 passed, 1 skipped
 py -m pytest -v          # verbose
 py -m pytest -k gui      # GUI unit tests only
 py -m pytest -k drive    # Drive sync tests (mocked)
@@ -235,6 +240,13 @@ py -m pytest -k persist  # Persistence layer tests
 | Persistence — restart survival | 4 |
 | Persistence — crash boundary | 5 |
 | Persistence — differential/integrity/drive/e2e | 9 |
+| RoadStar simulator | 9 |
+| Geofence + detention | 8 |
+| Dispatch map | 4 |
+| Canadian HOS | 10 |
+| Driver duty actions | 6 |
+| Load matching | 4 |
+| Dock/HOS vertical slice | 1 |
 | Live CALL-E (skipped) | 1 |
 
 ## Evidence
@@ -359,6 +371,33 @@ otp_portable/
 └── test_fixtures/       # CSV fixtures for testing
     └── dispatch.csv
 ```
+
+## RoadStar Challenge Surface
+
+The killer demo is **Dock/HOS Collision**: a truck waits at the London dock,
+detention crosses 2 hours, and the driver runs out of HOS while queued.
+
+```bash
+# Deterministic telemetry stream (Milton → 401 → London dock → departure)
+py tools/roadstar_simulator.py
+
+# Dispatch map with satellite toggle, breadcrumbs, speed, distance
+# (relay must be running; open on phone or desktop)
+# http://<host>:8787/dispatch?token=<session-token>
+```
+
+| Requirement | Implementation | Evidence |
+|---|---|---|
+| Dispatch dashboard + map | PySide6 control room + `/dispatch` Leaflet map | `test_dispatch_map.py` |
+| Real workbook data | Dispatch/Driver/Tlorder adapters | `test_vertical_slice.py`, `test_roadstar_matching.py` |
+| Telematics simulator | `roadstar_simulator.py` (seed 17, 11 samples) | `test_roadstar_simulator.py` |
+| Geofence + detention >2h | `roadstar_geofence.py` + SQLite visit store | `test_roadstar_geofence.py` |
+| Canadian HOS 13/14/16/10/cycles | `roadstar_hos.py` (decision support) | `test_roadstar_hos.py` |
+| Driver load accept + duty log | LAN receiver duty actions | `test_driver_actions.py` |
+| Deadhead reduction | Tlorder return-load ranking | `test_roadstar_matching.py` |
+| Edge case (HOS in dock queue) | `HOS_EXHAUSTION_DURING_DETENTION` | `test_roadstar_vertical_slice.py` |
+
+Full plan: [`ROADMAP_ROADSTAR.md`](ROADMAP_ROADSTAR.md).
 
 ## Roadmap
 
