@@ -1,7 +1,7 @@
 # RoadStar V0
 
-No official RoadStar data or participant resource was present locally at implementation time. Therefore OTP does not claim a production RoadStar schema.
+Official RoadStar materials were downloaded from the participant URLs on 2026-09-10. Their SHA-256 values and source URLs are in `ROADSTAR_SOURCE_EVIDENCE.md`. The workbook contains `Tlorder`, `Dispatch`, `Driver`, `Trucks`, and `Trailers` sheets.
 
-The checked-in fixture supports only acknowledgement leases and has observed fixture fields: `assignment_id`, `trip_id`, `driver_ref`, `assigned_at`, `ack_due_at`, `acknowledged_at`, and `contact_ref`. `RoadStarAdapter` maps them to generic assignment and acknowledgement concepts.
+The acknowledgement fixture remains an OTP-owned deterministic control. The workbook adapter maps `Dispatch` and `Driver` rows into normalized events. Source-specific names terminate in that adapter.
 
-Missing required artifact and stale-operation policies are future work, not fabricated scenarios. They require an observed RoadStar schema and semantics.
+Implemented data-backed observations are: ETA later than `DELIVER_BY`, latest status later than `DELIVER_BY`, and an active driver with zero reported remaining HOS hours. There is no observed acknowledgement or document-artifact field in this workbook, so those remain future work.

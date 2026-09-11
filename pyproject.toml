@@ -7,6 +7,7 @@ name = "operational-trust-pipeline"
 version = "0.1.0"
 description = "Provider-agnostic bounded operational action requests with verifiable evidence."
 requires-python = ">=3.11"
+dependencies = ["openpyxl>=3.1"]
 
 [project.scripts]
 otp = "otp.cli:main"

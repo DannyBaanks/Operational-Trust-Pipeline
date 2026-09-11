@@ -4,7 +4,7 @@ Operational Trust Pipeline turns operational state into bounded, verifiable huma
 
 `source -> normalize -> evaluate -> lease/policy -> Sentinel -> action request -> provider -> acknowledgement -> receipt`
 
-The first demonstrated composition is `RoadStar-like fixture -> OTP -> mock channel`. CALL-E is wired as an optional channel boundary but is not executed. RoadStar is an adapter; CALL-E is an adapter; neither is required by the core.
+The first demonstrated composition is `RoadStar workbook -> OTP -> mock channel`. The acknowledgement path uses an OTP-owned deterministic fixture; the RoadStar adapter also normalizes official `Dispatch` and `Driver` workbook rows. CALL-E is wired as an optional channel boundary but is not executed. RoadStar is an adapter; CALL-E is an adapter; neither is required by the core.
 
 ```powershell
 py -m pytest -q

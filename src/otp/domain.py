@@ -105,6 +105,24 @@ class ActionResult:
     completed_at: str | None
     error_code: str | None
     evidence_refs: tuple[str, ...] = ()
+    # Delivery-uncertainty fields. These separate two claims that providers
+    # commonly conflate: "the provider accepted/took the action" vs "the
+    # recipient's device actually received and answered". CALL-E's NO ANSWER
+    # with duration=0 is the motivating case: the platform did accept the
+    # task, but there is no signal that the handset ever rang.
+    provider_accepted: bool = False
+    delivery: str = "UNKNOWN"           # KNOWN | UNKNOWN | NOT_DEMONSTRATED
+    reached_ringing: str = "UNKNOWN"    # TRUE | FALSE | UNKNOWN
+    terminal_cause: str = "UNKNOWN"     # e.g. SIP/Q.850 cause if available
+    retry_safe: str = "UNKNOWN"         # allow-list, deny-list, or unknown
+
+    def recipient_acknowledged(self) -> bool:
+        """True only when there is evidence the recipient actually acknowledged.
+        Used by the pipeline to decide whether a lease can transition to
+        SATISFIED. `acknowledged` alone (provider-side task-handled) is not
+        sufficient.
+        """
+        return self.acknowledged and self.delivery != "NOT_DEMONSTRATED"
 
 
 def make_event(**kwargs: Any) -> OperationalEvent:

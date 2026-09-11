@@ -31,6 +31,37 @@ class AckLeasePolicy:
         return Finding(stable_id("finding", basis), self.version, status, "HIGH" if action else "INFO", lease.subject_ref, code, reason, (event.event_id, lease.lease_id), action)
 
 
+class DeliveryTimingPolicy:
+    version = "roadstar-delivery-timing-v0"
+    def evaluate(self, event: OperationalEvent) -> Finding:
+        due, expected, latest = event.payload.get("due_at"), event.payload.get("expected_at"), event.payload.get("latest_state_at")
+        if not due or (not expected and not latest):
+            status, code, reason, action = FindingStatus.UNKNOWN, "DELIVERY_TIMING_UNKNOWN", "Delivery timing inputs are incomplete.", False
+        elif expected and expected > due:
+            status, code, reason, action = FindingStatus.FAIL, "ETA_THRESHOLD_EXCEEDED", "Expected arrival is after the delivery deadline.", True
+        elif latest and latest > due:
+            status, code, reason, action = FindingStatus.FAIL, "DELIVERY_WINDOW_EXCEEDED", "Latest observed state is after the delivery deadline.", True
+        else:
+            status, code, reason, action = FindingStatus.PASS, "DELIVERY_TIMING_WITHIN_WINDOW", "Observed timing is within the delivery window.", False
+        basis = {"rule": self.version, "event": event.event_id, "code": code}
+        return Finding(stable_id("finding", basis), self.version, status, "HIGH" if action else "INFO", event.entity_id, code, reason, (event.event_id,), action)
+
+
+class HosCapacityPolicy:
+    version = "roadstar-hos-capacity-v0"
+    active_statuses = frozenset({"ASSGN", "DISP", "DEPSHIP", "ARRSHIP", "DEPCONS", "ARRCONS"})
+    def evaluate(self, event: OperationalEvent) -> Finding:
+        remaining, status = event.payload.get("remaining_hours"), event.payload.get("operation_status")
+        if not isinstance(remaining, (int, float)):
+            outcome, code, reason, action = FindingStatus.UNKNOWN, "HOS_CAPACITY_UNKNOWN", "Remaining HOS capacity is missing or invalid.", False
+        elif remaining <= 0 and status in self.active_statuses:
+            outcome, code, reason, action = FindingStatus.FAIL, "HOS_CAPACITY_EXHAUSTED", "Active driver has no remaining reported HOS capacity.", True
+        else:
+            outcome, code, reason, action = FindingStatus.PASS, "HOS_CAPACITY_AVAILABLE", "No active capacity exhaustion is observed.", False
+        basis = {"rule": self.version, "event": event.event_id, "code": code}
+        return Finding(stable_id("finding", basis), self.version, outcome, "HIGH" if action else "INFO", event.entity_id, code, reason, (event.event_id,), action)
+
+
 def sentinel(finding: Finding, authority_context: dict[str, Any]) -> SentinelVerdict:
     if finding.status is FindingStatus.UNKNOWN: return SentinelVerdict.NEEDS_REVIEW
     if not finding.action_recommended: return SentinelVerdict.NO_ACTION
@@ -53,8 +84,10 @@ def run_ack_lease(event: OperationalEvent, clock: Clock, channel: ChannelProvide
     policy = AckLeasePolicy(); finding = policy.evaluate(event, lease, clock); verdict = sentinel(finding, authority_context)
     action = request_for(finding, event, authority_context) if verdict is SentinelVerdict.ACTION_REQUESTED else None
     result = channel.send(action) if action else None
-    if result and result.acknowledged:
-        lease = replace(lease, state=LeaseState.SATISFIED, resolution="provider_acknowledgement", closed_at=clock.now().isoformat().replace("+00:00", "Z"))
+    # Recipient-side acknowledgement only. Provider-side "accepted" or
+    # "NO ANSWER / 0s" does not satisfy an acknowledgement lease.
+    if result and result.recipient_acknowledged():
+        lease = replace(lease, state=LeaseState.SATISFIED, resolution="recipient_acknowledgement", closed_at=clock.now().isoformat().replace("+00:00", "Z"))
     elif finding.reason_code == "ACK_LEASE_EXPIRED":
         lease = replace(lease, state=LeaseState.EXPIRED)
     return {"execution_id": execution_id(event, lease, policy), "event": event, "lease": lease, "finding": finding,
