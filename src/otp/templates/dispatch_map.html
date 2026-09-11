@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RoadStar Dispatch Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, system-ui, sans-serif; background: #0d1117; color: #e6edf3; }
+  header { padding: 10px 16px; border-bottom: 1px solid #30363d; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  header h1 { font-size: 16px; }
+  header .sub { font-size: 12px; color: #8b949e; }
+  #layout { display: flex; height: calc(100vh - 53px); }
+  #map { flex: 3; min-height: 320px; }
+  #panel { flex: 1; min-width: 260px; border-left: 1px solid #30363d; padding: 12px; overflow-y: auto; }
+  .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #21262d; font-size: 13px; }
+  .row .k { color: #8b949e; }
+  .row .v { font-weight: 600; text-align: right; }
+  .controls { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+  button, select { background: #21262d; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 8px 10px; font-size: 13px; cursor: pointer; }
+  button:hover { background: #30363d; }
+  .event { margin-top: 10px; padding: 8px; border: 1px solid #30363d; border-radius: 8px; font-size: 12px; }
+  .warn { color: #f0883e; font-weight: 700; }
+  .bad { color: #f85149; font-weight: 700; }
+  .ok { color: #3fb950; font-weight: 700; }
+  @media (max-width: 800px) { #layout { flex-direction: column; } #panel { border-left: none; border-top: 1px solid #30363d; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>RoadStar Dispatch — Milton → London</h1>
+  <span class="sub">Deterministic simulator · Satellite toggle in layer control · Breadcrumbs + speed + distance</span>
+</header>
+<div id="layout">
+  <div id="map"></div>
+  <div id="panel">
+    <div class="controls">
+      <button id="play">Pause</button>
+      <button id="step">Step</button>
+      <button id="reset">Reset</button>
+      <select id="speed">
+        <option value="1500">1x</option>
+        <option value="400" selected>10x</option>
+        <option value="120">60x</option>
+      </select>
+    </div>
+    <div class="row"><span class="k">Observed</span><span class="v" id="f-observed">—</span></div>
+    <div class="row"><span class="k">Truck</span><span class="v" id="f-truck">—</span></div>
+    <div class="row"><span class="k">Speed</span><span class="v" id="f-speed">—</span></div>
+    <div class="row"><span class="k">Leg distance</span><span class="v" id="f-distance">—</span></div>
+    <div class="row"><span class="k">Odometer</span><span class="v" id="f-odometer">—</span></div>
+    <div class="row"><span class="k">Duty</span><span class="v" id="f-duty">—</span></div>
+    <div class="row"><span class="k">Driving remaining</span><span class="v" id="f-driving">—</span></div>
+    <div class="row"><span class="k">On-duty remaining</span><span class="v" id="f-onduty">—</span></div>
+    <div class="row"><span class="k">Dock wait</span><span class="v" id="f-dock">—</span></div>
+    <div class="row"><span class="k">Geofence</span><span class="v" id="f-geofence">—</span></div>
+    <div class="event" id="f-event">Loading scenario…</div>
+    <div class="event">Map tiles need internet (OSM/Esri). Telemetry panel keeps working if tiles fail.</div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const params = new URLSearchParams(window.location.search);
+const TOKEN = params.get('token') || '';
+const HEADERS = {'X-Session-Token': TOKEN};
+let samples = [], geofence = null, index = 0, playing = true, timer = null;
+let map, truckMarker, trail, facilityCircle;
+
+function fmtHours(h) { return (h == null) ? '—' : Number(h).toFixed(2) + ' h'; }
+
+async function load() {
+  const [s, g] = await Promise.all([
+    fetch('/api/scenario', {headers: HEADERS}).then(r => r.json()),
+    fetch('/api/geofence', {headers: HEADERS}).then(r => r.json()),
+  ]);
+  samples = s.samples || [];
+  geofence = g.geofence;
+  initMap();
+  render();
+  loop();
+}
+
+function initMap() {
+  map = L.map('map').setView([43.2, -80.6], 8);
+  const streets = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, attribution: '© OpenStreetMap'});
+  const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom: 19, attribution: '© Esri'});
+  streets.addTo(map);
+  L.control.layers({'Streets': streets, 'Satellite': satellite}).addTo(map);
+  if (geofence) {
+    facilityCircle = L.circle([geofence.latitude, geofence.longitude], {radius: geofence.radius_km * 1000}).addTo(map);
+    facilityCircle.bindPopup(geofence.name);
+  }
+  trail = L.polyline([], {color: '#1f6feb'}).addTo(map);
+  truckMarker = L.marker([samples[0].latitude, samples[0].longitude]).addTo(map);
+}
+
+function render() {
+  const t = samples[index];
+  if (!t) return;
+  truckMarker.setLatLng([t.latitude, t.longitude]);
+  trail.setLatLngs(samples.slice(0, index + 1).map(s => [s.latitude, s.longitude]));
+  document.getElementById('f-observed').textContent = t.observed_at;
+  document.getElementById('f-truck').textContent = t.truck_id + ' · ' + t.trip_ref;
+  document.getElementById('f-speed').textContent = t.speed_kph + ' km/h';
+  document.getElementById('f-distance').textContent = t.distance_km + ' km';
+  document.getElementById('f-odometer').textContent = t.odometer_km + ' km';
+  document.getElementById('f-duty').textContent = t.duty_status;
+  document.getElementById('f-driving').textContent = fmtHours(t.driving_hours_remaining);
+  document.getElementById('f-onduty').textContent = fmtHours(t.on_duty_hours_remaining);
+  document.getElementById('f-dock').textContent = t.dock_wait_minutes + ' min';
+  document.getElementById('f-geofence').textContent = t.geofence_event || (t.facility_id ? 'INSIDE' : 'OUTSIDE');
+  const ev = document.getElementById('f-event');
+  const label = t.scenario_event || 'EN ROUTE';
+  let cls = '';
+  if (label === 'HOS_COLLISION' || label === 'DETENTION_THRESHOLD') cls = 'bad';
+  else if (label === '401_SLOWDOWN' || label === 'DOCK_WAIT') cls = 'warn';
+  else if (label === 'DOCK_DEPARTURE') cls = 'ok';
+  ev.innerHTML = 'Sample ' + t.sequence + '/' + (samples.length - 1) + ' — <span class="' + cls + '">' + label + '</span>';
+}
+
+function loop() {
+  clearInterval(timer);
+  const interval = Number(document.getElementById('speed').value);
+  timer = setInterval(() => {
+    if (!playing) return;
+    if (index < samples.length - 1) { index++; render(); }
+    else { playing = false; document.getElementById('play').textContent = 'Play'; }
+  }, interval);
+}
+
+document.getElementById('play').onclick = () => {
+  playing = !playing;
+  document.getElementById('play').textContent = playing ? 'Pause' : 'Play';
+};
+document.getElementById('step').onclick = () => {
+  playing = false;
+  document.getElementById('play').textContent = 'Play';
+  if (index < samples.length - 1) { index++; render(); }
+};
+document.getElementById('reset').onclick = () => { index = 0; render(); };
+document.getElementById('speed').onchange = loop;
+load();
+</script>
+</body>
+</html>

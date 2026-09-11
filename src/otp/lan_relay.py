@@ -39,6 +39,31 @@ def create_app() -> Flask:
     def receiver_page():
         return render_template("lan_receiver.html")
 
+    @app.route("/dispatch", methods=["GET"])
+    def dispatch_page():
+        return render_template("dispatch_map.html")
+
+    @app.route("/api/scenario", methods=["GET"])
+    def scenario():
+        if not _auth_ok():
+            return jsonify({"error": "unauthorized"}), 401
+        from .roadstar_simulator import RoadStarSimulator
+        samples = [item.as_dict() for item in RoadStarSimulator().stream()]
+        return jsonify({"ok": True, "samples": samples})
+
+    @app.route("/api/geofence", methods=["GET"])
+    def geofence():
+        if not _auth_ok():
+            return jsonify({"error": "unauthorized"}), 401
+        from .roadstar_simulator import LONDON_FACILITY
+        return jsonify({"ok": True, "geofence": {
+            "facility_id": LONDON_FACILITY.facility_id,
+            "name": LONDON_FACILITY.name,
+            "latitude": LONDON_FACILITY.latitude,
+            "longitude": LONDON_FACILITY.longitude,
+            "radius_km": LONDON_FACILITY.radius_km,
+        }})
+
     @app.route("/api/poll", methods=["GET"])
     def poll():
         if not _auth_ok():
