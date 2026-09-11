@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OTP Evidence Viewer</title>
+<style>
+/* ============================================================
+   WINDOWS XP AESTHETIC
+   ============================================================ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {{
+    font-family: Tahoma, "MS Sans Serif", Arial, sans-serif;
+    font-size: 11px;
+    background: #ECE9D8;
+    color: #000;
+    min-height: 100vh;
+}}
+
+/* Title bar */
+.title-bar {{
+    background: linear-gradient(180deg, #0A246A 0%, #3C82D6 8%, #0A246A 100%);
+    color: white;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}}
+.title-bar .icon {{ font-size: 16px; }}
+.title-bar .title {{ flex: 1; }}
+.title-bar .close {{
+    background: #C0392B;
+    color: white;
+    border: 1px outset #E74C3C;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+}}
+.title-bar .close:hover {{ background: #E74C3C; }}
+
+/* Window frame */
+.window {{
+    border: 2px outset #D4D0C8;
+    margin: 4px;
+    background: #ECE9D8;
+}}
+
+/* Menu bar */
+.menu-bar {{
+    background: #ECE9D8;
+    border-bottom: 1px solid #ACA899;
+    padding: 2px 4px;
+    display: flex;
+    gap: 0;
+}}
+.menu-bar .menu-item {{
+    padding: 2px 8px;
+    cursor: pointer;
+}}
+.menu-bar .menu-item:hover {{
+    background: #316AC5;
+    color: white;
+}}
+
+/* Status bar */
+.status-bar {{
+    background: #ECE9D8;
+    border-top: 1px solid #ACA899;
+    padding: 2px 8px;
+    font-size: 10px;
+    color: #444;
+    display: flex;
+    gap: 16px;
+}}
+.status-bar .section {{
+    border: 1px inset #D4D0C8;
+    padding: 1px 6px;
+    flex: 1;
+}}
+
+/* Tab control */
+.tabs {{
+    display: flex;
+    border-bottom: 1px solid #ACA899;
+    padding: 0 4px;
+    background: #ECE9D8;
+}}
+.tab {{
+    padding: 4px 12px;
+    border: 1px solid #ACA899;
+    border-bottom: none;
+    background: #D4D0C8;
+    cursor: pointer;
+    margin-right: 2px;
+    position: relative;
+    top: 1px;
+}}
+.tab.active {{
+    background: #ECE9D8;
+    border-bottom: 1px solid #ECE9D8;
+    font-weight: bold;
+}}
+.tab:hover:not(.active) {{
+    background: #C8C4BC;
+}}
+
+/* Tab content */
+.tab-content {{
+    display: none;
+    padding: 8px;
+}}
+.tab-content.active {{
+    display: block;
+}}
+
+/* Group box */
+.group-box {{
+    border: 1px solid #ACA899;
+    margin: 8px 0;
+    padding: 12px 8px 8px 8px;
+    position: relative;
+}}
+.group-box .label {{
+    background: #ECE9D8;
+    padding: 0 4px;
+    position: absolute;
+    top: -8px;
+    left: 8px;
+    font-weight: bold;
+    font-size: 11px;
+}}
+
+/* Fields */
+.field {{
+    display: flex;
+    margin: 3px 0;
+    align-items: flex-start;
+}}
+.field-label {{
+    width: 140px;
+    font-weight: bold;
+    color: #003399;
+    flex-shrink: 0;
+}}
+.field-value {{
+    flex: 1;
+    word-break: break-all;
+}}
+.field-value code {{
+    background: #FFF;
+    border: 1px inset #D4D0C8;
+    padding: 1px 4px;
+    font-family: "Lucida Console", "Courier New", monospace;
+    font-size: 10px;
+}}
+
+/* Verdict badge */
+.verdict {{
+    display: inline-block;
+    padding: 2px 8px;
+    font-weight: bold;
+    border: 2px outset;
+    font-size: 12px;
+}}
+.verdict-ACTION_REQUESTED {{ background: #FF6B6B; color: #000; border-color: #FF8888; }}
+.verdict-NO_ACTION {{ background: #90EE90; color: #000; border-color: #98FB98; }}
+.verdict-BLOCKED {{ background: #FFB347; color: #000; border-color: #FFC87C; }}
+.verdict-NEEDS_REVIEW {{ background: #FFD700; color: #000; border-color: #FFE44D; }}
+.verdict-NOT_DEMONSTRATED {{ background: #D3D3D3; color: #000; border-color: #DCDCDC; }}
+
+/* Finding status */
+.status-PASS {{ color: #008000; font-weight: bold; }}
+.status-FAIL {{ color: #CC0000; font-weight: bold; }}
+.status-UNKNOWN {{ color: #666; font-style: italic; }}
+
+/* Severity */
+.severity-HIGH {{ color: #CC0000; font-weight: bold; }}
+.severity-INFO {{ color: #0066CC; }}
+
+/* Component cards */
+.component {{
+    border: 1px solid #ACA899;
+    margin: 4px 0;
+    background: #FFF;
+}}
+.component-header {{
+    background: #E8E4DC;
+    padding: 4px 8px;
+    font-weight: bold;
+    border-bottom: 1px solid #ACA899;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}}
+.component-header:hover {{
+    background: #D8D4CC;
+}}
+.component-header .arrow {{
+    font-size: 8px;
+}}
+.component-body {{
+    padding: 8px;
+    display: none;
+}}
+.component-body.open {{
+    display: block;
+}}
+.component-body pre {{
+    background: #FFF;
+    border: 1px inset #D4D0C8;
+    padding: 4px;
+    font-family: "Lucida Console", "Courier New", monospace;
+    font-size: 10px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 300px;
+    overflow-y: auto;
+}}
+
+/* SHA-256 display */
+.sha256 {{
+    font-family: "Lucida Console", "Courier New", monospace;
+    font-size: 10px;
+    background: #F5F5DC;
+    border: 1px inset #D4D0C8;
+    padding: 2px 4px;
+    word-break: break-all;
+}}
+
+/* Verification button */
+.verify-btn {{
+    background: #D4D0C8;
+    border: 2px outset #D4D0C8;
+    padding: 4px 16px;
+    font-family: Tahoma, "MS Sans Serif", Arial, sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+}}
+.verify-btn:hover {{
+    background: #C8C4BC;
+}}
+.verify-btn:active {{
+    border-style: inset;
+}}
+
+/* Verification result */
+.verify-result {{
+    margin: 8px 0;
+    padding: 8px;
+    border: 2px inset #D4D0C8;
+    font-weight: bold;
+}}
+.verify-valid {{
+    background: #90EE90;
+    color: #006400;
+}}
+.verify-invalid {{
+    background: #FFB3B3;
+    color: #8B0000;
+}}
+
+/* Limitations box */
+.limitations {{
+    background: #FFFACD;
+    border: 1px solid #DAA520;
+    padding: 8px;
+    margin: 8px 0;
+    font-size: 10px;
+}}
+.limitations .title {{
+    font-weight: bold;
+    color: #8B4513;
+    margin-bottom: 4px;
+}}
+
+/* Ledger chain */
+.ledger-chain {{
+    font-family: "Lucida Console", "Courier New", monospace;
+    font-size: 9px;
+    background: #1E1E1E;
+    color: #0F0;
+    padding: 8px;
+    border: 2px inset #444;
+    overflow-x: auto;
+    white-space: pre;
+}}
+
+/* XP-style scrollbar */
+::-webkit-scrollbar {{ width: 16px; height: 16px; }}
+::-webkit-scrollbar-track {{ background: #ECE9D8; border: 1px inset #D4D0C8; }}
+::-webkit-scrollbar-thumb {{
+    background: #D4D0C8;
+    border: 2px outset #D4D0C8;
+}}
+::-webkit-scrollbar-thumb:hover {{ background: #C8C4BC; }}
+::-webkit-scrollbar-button {{
+    background: #D4D0C8;
+    border: 1px outset #D4D0C8;
+    height: 16px;
+}}
+</style>
+</head>
+<body>
+
+<!-- Title Bar -->
+<div class="title-bar">
+    <span class="icon">📋</span>
+    <span class="title">OTP Evidence Viewer - exec_demo_001</span>
+    <span class="close" onclick="window.close()">X</span>
+</div>
+
+<div class="window">
+
+<!-- Menu Bar -->
+<div class="menu-bar">
+    <span class="menu-item" onclick="verifyReceipt()">🔍 Verify</span>
+    <span class="menu-item" onclick="downloadEvidence()">💾 Save As...</span>
+    <span class="menu-item" onclick="copyHash()">📋 Copy Hash</span>
+    <span class="menu-item" onclick="toggleTheme()">🌙 Theme</span>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+    <div class="tab active" onclick="switchTab('overview')">Overview</div>
+    <div class="tab" onclick="switchTab('event')">Event</div>
+    <div class="tab" onclick="switchTab('finding')">Finding</div>
+    <div class="tab" onclick="switchTab('action')">Action</div>
+    <div class="tab" onclick="switchTab('components')">Components</div>
+    <div class="tab" onclick="switchTab('raw')">Raw JSON</div>
+</div>
+
+<!-- Tab: Overview -->
+<div id="tab-overview" class="tab-content active">
+    <div class="group-box">
+        <span class="label">Execution</span>
+        <div class="field">
+            <span class="field-label">Execution ID:</span>
+            <span class="field-value"><code>exec_demo_001</code></span>
+        </div>
+        <div class="field">
+            <span class="field-label">Source Adapter:</span>
+            <span class="field-value">roadstar-workbook-v0</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Policy Version:</span>
+            <span class="field-value">ack-lease-v0</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Channel Adapter:</span>
+            <span class="field-value">mock</span>
+        </div>
+    </div>
+
+    <div class="group-box">
+        <span class="label">Verdict</span>
+        <div style="text-align: center; padding: 8px;">
+            <span class="verdict verdict-ACTION_REQUESTED">ACTION_REQUESTED</span>
+        </div>
+    </div>
+
+    <div class="group-box">
+        <span class="label">Finding</span>
+        <div class="field">
+            <span class="field-label">Status:</span>
+            <span class="field-value status-FAIL">FAIL</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Reason Code:</span>
+            <span class="field-value"><code>ACK_LEASE_EXPIRED</code></span>
+        </div>
+        <div class="field">
+            <span class="field-label">Severity:</span>
+            <span class="field-value severity-HIGH">HIGH</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Action Recommended:</span>
+            <span class="field-value">Yes</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Description:</span>
+            <span class="field-value">Acknowledgement was not observed by the deadline.</span>
+        </div>
+    </div>
+
+    <div class="group-box">
+        <span class="label">Receipt Integrity</span>
+        <div class="field">
+            <span class="field-label">Receipt SHA-256:</span>
+            <span class="field-value"><span class="sha256" id="receipt-hash">bb098d54cca0aaa77916284b3ba5a0d33ef4dad269d105d70871758dd8df09e0</span></span>
+        </div>
+        <div class="field">
+            <span class="field-label">Previous Receipt:</span>
+            <span class="field-value"><span class="sha256">(none — first receipt)</span></span>
+        </div>
+        <div style="margin-top: 8px; text-align: center;">
+            <button class="verify-btn" onclick="verifyReceipt()">🔍 Verify Integrity</button>
+        </div>
+        <div id="verify-result" class="verify-result" style="display: none;"></div>
+    </div>
+
+    <div class="limitations">
+        <div class="title">⚠️ Limitations</div>
+        <ul>
+            <li>Integrity verification does not replay external provider behavior.</li>
+            <li>An unanchored append-only chain cannot detect tail truncation.</li>
+        </ul>
+    </div>
+</div>
+
+<!-- Tab: Event -->
+<div id="tab-event" class="tab-content">
+    <div class="group-box">
+        <span class="label">Operational Event</span>
+        <div class="field">
+            <span class="field-label">Event ID:</span>
+            <span class="field-value"><code>evt_175c1bc3e1b0d5c93c52</code></span>
+        </div>
+        <div class="field">
+            <span class="field-label">Source:</span>
+            <span class="field-value">roadstar</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Event Type:</span>
+            <span class="field-value">roadstar_event_type</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Source Ref:</span>
+            <span class="field-value"><code>roadstar_ref</code></span>
+        </div>
+        <div class="field">
+            <span class="field-label">Entity Type:</span>
+            <span class="field-value">dispatch_leg</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Entity ID:</span>
+            <span class="field-value"><code>LEG-001A</code></span>
+        </div>
+        <div class="field">
+            <span class="field-label">Observed At:</span>
+            <span class="field-value">2026-09-10T13:55:00Z</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Payload SHA-256:</span>
+            <span class="field-value"><span class="sha256">a4171e56ea3412fa43d8a5155ea757cfea83c56efbd4e3ca8d29d06a0a07a183</span></span>
+        </div>
+    </div>
+
+    <div class="group-box">
+        <span class="label">Payload</span>
+        <pre>{
+  &quot;trip_ref&quot;: &quot;TRIP-001&quot;,
+  &quot;leg_ref&quot;: &quot;LEG-001A&quot;,
+  &quot;expected_at&quot;: &quot;2026-09-10T14:00:00Z&quot;,
+  &quot;due_at&quot;: &quot;2026-09-10T14:30:00Z&quot;,
+  &quot;latest_state_at&quot;: &quot;2026-09-10T13:55:00Z&quot;,
+  &quot;operation_status&quot;: &quot;IN_TRANSIT&quot;,
+  &quot;contact_ref&quot;: &quot;driver@example.com&quot;,
+  &quot;ack_due_at&quot;: &quot;2026-09-10T14:00:00Z&quot;
+}</pre>
+    </div>
+</div>
+
+<!-- Tab: Finding -->
+<div id="tab-finding" class="tab-content">
+    <div class="group-box">
+        <span class="label">Finding Details</span>
+        <div class="field">
+            <span class="field-label">Finding ID:</span>
+            <span class="field-value"><code>finding_658c6b05f34a58be1c66</code></span>
+        </div>
+        <div class="field">
+            <span class="field-label">Rule ID:</span>
+            <span class="field-value">ack-lease-v0</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Status:</span>
+            <span class="field-value status-FAIL">FAIL</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Severity:</span>
+            <span class="field-value severity-HIGH">HIGH</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Subject:</span>
+            <span class="field-value"><code>LEG-001A</code></span>
+        </div>
+        <div class="field">
+            <span class="field-label">Reason Code:</span>
+            <span class="field-value"><code>ACK_LEASE_EXPIRED</code></span>
+        </div>
+        <div class="field">
+            <span class="field-label">Reason:</span>
+            <span class="field-value">Acknowledgement was not observed by the deadline.</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Action Recommended:</span>
+            <span class="field-value">Yes</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Evidence Refs:</span>
+            <span class="field-value"><code>evt_175c1bc3e1b0d5c93c52, lease_461c0951b801f0b3cb91</code></span>
+        </div>
+    </div>
+
+    <div class="group-box">
+        <span class="label">Component SHA-256</span>
+        <div class="field">
+            <span class="field-label">Finding Hash:</span>
+            <span class="field-value"><span class="sha256">b208c200f62fb3d37fb70cd8e56497526e09db2caa02bd80f41be7770cda5d2b</span></span>
+        </div>
+    </div>
+</div>
+
+<!-- Tab: Action -->
+<div id="tab-action" class="tab-content">
+    <div class="group-box">
+        <span class="label">Action Request</span>
+        <div class="field">
+            <span class="field-label">Action ID:</span>
+            <span class="field-value"><code>action_466ec75356f6e57607ae</code></span>
+        </div>
+        <div class="field">
+            <span class="field-label">Type:</span>
+            <span class="field-value">notify</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Target:</span>
+            <span class="field-value"><code>driver@example.com</code></span>
+        </div>
+        <div class="field">
+            <span class="field-label">Channel:</span>
+            <span class="field-value">mock</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Urgency:</span>
+            <span class="field-value">HIGH</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Objective:</span>
+            <span class="field-value">Request acknowledgement for an overdue operational assignment.</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Message:</span>
+            <span class="field-value">Please acknowledge assignment TRIP-001:LEG-001A.</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Require ACK:</span>
+            <span class="field-value">Yes</span>
+        </div>
+    </div>
+
+    <div class="group-box">
+        <span class="label">Action Result</span>
+        <div class="field">
+            <span class="field-label">Provider:</span>
+            <span class="field-value">mock</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Provider Ref:</span>
+            <span class="field-value"><code>mock_ref</code></span>
+        </div>
+        <div class="field">
+            <span class="field-label">Status:</span>
+            <span class="field-value">ACKNOWLEDGED</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Acknowledged:</span>
+            <span class="field-value">Yes</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Delivery:</span>
+            <span class="field-value">KNOWN</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Reached Ringing:</span>
+            <span class="field-value">TRUE</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Terminal Cause:</span>
+            <span class="field-value">ACKNOWLEDGED</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Started At:</span>
+            <span class="field-value">2026-09-10T13:56:00Z</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Completed At:</span>
+            <span class="field-value">2026-09-10T13:56:05Z</span>
+        </div>
+        <div class="field">
+            <span class="field-label">Response:</span>
+            <span class="field-value">Acknowledged by driver</span>
+        </div>
+    </div>
+
+    <div class="group-box">
+        <span class="label">Component SHA-256</span>
+        <div class="field">
+            <span class="field-label">Action Hash:</span>
+            <span class="field-value"><span class="sha256">43f3c02dd7b22e90eeac6666cb83b0fe73af8e7589fecbd854ae064e6df1954c</span></span>
+        </div>
+        <div class="field">
+            <span class="field-label">Result Hash:</span>
+            <span class="field-value"><span class="sha256">77aeba8043aff5c89a131d6b221f46db384eaae16ff3e08b3ed4397724073178</span></span>
+        </div>
+    </div>
+</div>
+
+<!-- Tab: Components -->
+<div id="tab-components" class="tab-content">
+    <div class="component">
+        <div class="component-header" onclick="toggleComponent('comp-event')">
+            <span class="arrow" id="arrow-comp-event">▶</span>
+            Event Component
+            <span class="sha256" style="margin-left: auto;">8cd5251a834feee18d4a5090d7e1d9784a18caad60fefcb8cb8deadc5d38d591</span>
+        </div>
+        <div class="component-body" id="comp-event">
+            <pre>{
+  &quot;event_id&quot;: &quot;evt_175c1bc3e1b0d5c93c52&quot;,
+  &quot;schema_version&quot;: &quot;operational-event/1&quot;,
+  &quot;source&quot;: &quot;roadstar&quot;,
+  &quot;source_event_type&quot;: &quot;dispatch.leg_observed&quot;,
+  &quot;source_ref&quot;: &quot;TRIP-001:LEG-001A&quot;,
+  &quot;entity_type&quot;: &quot;dispatch_leg&quot;,
+  &quot;entity_id&quot;: &quot;LEG-001A&quot;,
+  &quot;observed_at&quot;: &quot;2026-09-10T13:55:00Z&quot;,
+  &quot;payload&quot;: {
+    &quot;trip_ref&quot;: &quot;TRIP-001&quot;,
+    &quot;leg_ref&quot;: &quot;LEG-001A&quot;,
+    &quot;expected_at&quot;: &quot;2026-09-10T14:00:00Z&quot;,
+    &quot;due_at&quot;: &quot;2026-09-10T14:30:00Z&quot;,
+    &quot;latest_state_at&quot;: &quot;2026-09-10T13:55:00Z&quot;,
+    &quot;operation_status&quot;: &quot;IN_TRANSIT&quot;,
+    &quot;contact_ref&quot;: &quot;driver@example.com&quot;,
+    &quot;ack_due_at&quot;: &quot;2026-09-10T14:00:00Z&quot;
+  },
+  &quot;payload_sha256&quot;: &quot;a4171e56ea3412fa43d8a5155ea757cfea83c56efbd4e3ca8d29d06a0a07a183&quot;,
+  &quot;evidence_refs&quot;: []
+}</pre>
+        </div>
+    </div>
+
+    <div class="component">
+        <div class="component-header" onclick="toggleComponent('comp-lease')">
+            <span class="arrow" id="arrow-comp-lease">▶</span>
+            Lease Component
+            <span class="sha256" style="margin-left: auto;">96031a308a847fcd93bc2d027108fe802d9d5dee66acfef8ff164143b6679442</span>
+        </div>
+        <div class="component-body" id="comp-lease">
+            <pre>{
+  &quot;lease_id&quot;: &quot;lease_461c0951b801f0b3cb91&quot;,
+  &quot;kind&quot;: &quot;acknowledgement&quot;,
+  &quot;subject_ref&quot;: &quot;LEG-001A&quot;,
+  &quot;opened_at&quot;: &quot;2026-09-10T13:55:00Z&quot;,
+  &quot;due_at&quot;: &quot;2026-09-10T14:00:00Z&quot;,
+  &quot;state&quot;: &quot;OPEN&quot;,
+  &quot;required_condition&quot;: &quot;acknowledged&quot;,
+  &quot;resolution&quot;: null,
+  &quot;closed_at&quot;: null
+}</pre>
+        </div>
+    </div>
+
+    <div class="component">
+        <div class="component-header" onclick="toggleComponent('comp-finding')">
+            <span class="arrow" id="arrow-comp-finding">▶</span>
+            Finding Component
+            <span class="sha256" style="margin-left: auto;">b208c200f62fb3d37fb70cd8e56497526e09db2caa02bd80f41be7770cda5d2b</span>
+        </div>
+        <div class="component-body" id="comp-finding">
+            <pre>{
+  &quot;finding_id&quot;: &quot;finding_658c6b05f34a58be1c66&quot;,
+  &quot;rule_id&quot;: &quot;ack-lease-v0&quot;,
+  &quot;status&quot;: &quot;FAIL&quot;,
+  &quot;severity&quot;: &quot;HIGH&quot;,
+  &quot;subject_ref&quot;: &quot;LEG-001A&quot;,
+  &quot;reason_code&quot;: &quot;ACK_LEASE_EXPIRED&quot;,
+  &quot;reason&quot;: &quot;Acknowledgement was not observed by the deadline.&quot;,
+  &quot;evidence_refs&quot;: [
+    &quot;evt_175c1bc3e1b0d5c93c52&quot;,
+    &quot;lease_461c0951b801f0b3cb91&quot;
+  ],
+  &quot;action_recommended&quot;: true
+}</pre>
+        </div>
+    </div>
+
+    <div class="component">
+        <div class="component-header" onclick="toggleComponent('comp-action')">
+            <span class="arrow" id="arrow-comp-action">▶</span>
+            Action Component
+            <span class="sha256" style="margin-left: auto;">43f3c02dd7b22e90eeac6666cb83b0fe73af8e7589fecbd854ae064e6df1954c</span>
+        </div>
+        <div class="component-body" id="comp-action">
+            <pre>{
+  &quot;action_id&quot;: &quot;action_466ec75356f6e57607ae&quot;,
+  &quot;action_type&quot;: &quot;notify&quot;,
+  &quot;target_ref&quot;: &quot;driver@example.com&quot;,
+  &quot;channel&quot;: &quot;mock&quot;,
+  &quot;objective&quot;: &quot;Request acknowledgement for an overdue operational assignment.&quot;,
+  &quot;message&quot;: &quot;Please acknowledge assignment TRIP-001:LEG-001A.&quot;,
+  &quot;require_ack&quot;: true,
+  &quot;urgency&quot;: &quot;HIGH&quot;,
+  &quot;source_finding_ids&quot;: [
+    &quot;finding_658c6b05f34a58be1c66&quot;
+  ],
+  &quot;authority_context&quot;: {
+    &quot;communication_allowed&quot;: true,
+    &quot;channel&quot;: &quot;mock&quot;
+  },
+  &quot;metadata&quot;: {}
+}</pre>
+        </div>
+    </div>
+
+    <div class="component">
+        <div class="component-header" onclick="toggleComponent('comp-result')">
+            <span class="arrow" id="arrow-comp-result">▶</span>
+            Result Component
+            <span class="sha256" style="margin-left: auto;">77aeba8043aff5c89a131d6b221f46db384eaae16ff3e08b3ed4397724073178</span>
+        </div>
+        <div class="component-body" id="comp-result">
+            <pre>{
+  &quot;action_id&quot;: &quot;action_466ec75356f6e57607ae&quot;,
+  &quot;provider&quot;: &quot;mock&quot;,
+  &quot;provider_ref&quot;: &quot;mock-ref-001&quot;,
+  &quot;status&quot;: &quot;ACKNOWLEDGED&quot;,
+  &quot;acknowledged&quot;: true,
+  &quot;response&quot;: &quot;Acknowledged by driver&quot;,
+  &quot;started_at&quot;: &quot;2026-09-10T13:56:00Z&quot;,
+  &quot;completed_at&quot;: &quot;2026-09-10T13:56:05Z&quot;,
+  &quot;error_code&quot;: null,
+  &quot;evidence_refs&quot;: [],
+  &quot;provider_accepted&quot;: true,
+  &quot;delivery&quot;: &quot;KNOWN&quot;,
+  &quot;reached_ringing&quot;: &quot;TRUE&quot;,
+  &quot;terminal_cause&quot;: &quot;ACKNOWLEDGED&quot;,
+  &quot;retry_safe&quot;: &quot;FALSE&quot;
+}</pre>
+        </div>
+    </div>
+</div>
+
+<!-- Tab: Raw -->
+<div id="tab-raw" class="tab-content">
+    <div class="group-box">
+        <span class="label">Full Evidence Receipt (JSON)</span>
+        <pre style="max-height: 500px; overflow-y: auto;">{
+  &quot;schema_version&quot;: &quot;evidence-receipt/1&quot;,
+  &quot;execution_id&quot;: &quot;exec_demo_001&quot;,
+  &quot;source_adapter&quot;: &quot;roadstar-workbook-v0&quot;,
+  &quot;policy_version&quot;: &quot;ack-lease-v0&quot;,
+  &quot;channel_adapter&quot;: &quot;mock&quot;,
+  &quot;verdict&quot;: &quot;ACTION_REQUESTED&quot;,
+  &quot;components&quot;: {
+    &quot;event&quot;: {
+      &quot;event_id&quot;: &quot;evt_175c1bc3e1b0d5c93c52&quot;,
+      &quot;schema_version&quot;: &quot;operational-event/1&quot;,
+      &quot;source&quot;: &quot;roadstar&quot;,
+      &quot;source_event_type&quot;: &quot;dispatch.leg_observed&quot;,
+      &quot;source_ref&quot;: &quot;TRIP-001:LEG-001A&quot;,
+      &quot;entity_type&quot;: &quot;dispatch_leg&quot;,
+      &quot;entity_id&quot;: &quot;LEG-001A&quot;,
+      &quot;observed_at&quot;: &quot;2026-09-10T13:55:00Z&quot;,
+      &quot;payload&quot;: {
+        &quot;trip_ref&quot;: &quot;TRIP-001&quot;,
+        &quot;leg_ref&quot;: &quot;LEG-001A&quot;,
+        &quot;expected_at&quot;: &quot;2026-09-10T14:00:00Z&quot;,
+        &quot;due_at&quot;: &quot;2026-09-10T14:30:00Z&quot;,
+        &quot;latest_state_at&quot;: &quot;2026-09-10T13:55:00Z&quot;,
+        &quot;operation_status&quot;: &quot;IN_TRANSIT&quot;,
+        &quot;contact_ref&quot;: &quot;driver@example.com&quot;,
+        &quot;ack_due_at&quot;: &quot;2026-09-10T14:00:00Z&quot;
+      },
+      &quot;payload_sha256&quot;: &quot;a4171e56ea3412fa43d8a5155ea757cfea83c56efbd4e3ca8d29d06a0a07a183&quot;,
+      &quot;evidence_refs&quot;: []
+    },
+    &quot;lease&quot;: {
+      &quot;lease_id&quot;: &quot;lease_461c0951b801f0b3cb91&quot;,
+      &quot;kind&quot;: &quot;acknowledgement&quot;,
+      &quot;subject_ref&quot;: &quot;LEG-001A&quot;,
+      &quot;opened_at&quot;: &quot;2026-09-10T13:55:00Z&quot;,
+      &quot;due_at&quot;: &quot;2026-09-10T14:00:00Z&quot;,
+      &quot;state&quot;: &quot;OPEN&quot;,
+      &quot;required_condition&quot;: &quot;acknowledged&quot;,
+      &quot;resolution&quot;: null,
+      &quot;closed_at&quot;: null
+    },
+    &quot;finding&quot;: {
+      &quot;finding_id&quot;: &quot;finding_658c6b05f34a58be1c66&quot;,
+      &quot;rule_id&quot;: &quot;ack-lease-v0&quot;,
+      &quot;status&quot;: &quot;FAIL&quot;,
+      &quot;severity&quot;: &quot;HIGH&quot;,
+      &quot;subject_ref&quot;: &quot;LEG-001A&quot;,
+      &quot;reason_code&quot;: &quot;ACK_LEASE_EXPIRED&quot;,
+      &quot;reason&quot;: &quot;Acknowledgement was not observed by the deadline.&quot;,
+      &quot;evidence_refs&quot;: [
+        &quot;evt_175c1bc3e1b0d5c93c52&quot;,
+        &quot;lease_461c0951b801f0b3cb91&quot;
+      ],
+      &quot;action_recommended&quot;: true
+    },
+    &quot;action&quot;: {
+      &quot;action_id&quot;: &quot;action_466ec75356f6e57607ae&quot;,
+      &quot;action_type&quot;: &quot;notify&quot;,
+      &quot;target_ref&quot;: &quot;driver@example.com&quot;,
+      &quot;channel&quot;: &quot;mock&quot;,
+      &quot;objective&quot;: &quot;Request acknowledgement for an overdue operational assignment.&quot;,
+      &quot;message&quot;: &quot;Please acknowledge assignment TRIP-001:LEG-001A.&quot;,
+      &quot;require_ack&quot;: true,
+      &quot;urgency&quot;: &quot;HIGH&quot;,
+      &quot;source_finding_ids&quot;: [
+        &quot;finding_658c6b05f34a58be1c66&quot;
+      ],
+      &quot;authority_context&quot;: {
+        &quot;communication_allowed&quot;: true,
+        &quot;channel&quot;: &quot;mock&quot;
+      },
+      &quot;metadata&quot;: {}
+    },
+    &quot;result&quot;: {
+      &quot;action_id&quot;: &quot;action_466ec75356f6e57607ae&quot;,
+      &quot;provider&quot;: &quot;mock&quot;,
+      &quot;provider_ref&quot;: &quot;mock-ref-001&quot;,
+      &quot;status&quot;: &quot;ACKNOWLEDGED&quot;,
+      &quot;acknowledged&quot;: true,
+      &quot;response&quot;: &quot;Acknowledged by driver&quot;,
+      &quot;started_at&quot;: &quot;2026-09-10T13:56:00Z&quot;,
+      &quot;completed_at&quot;: &quot;2026-09-10T13:56:05Z&quot;,
+      &quot;error_code&quot;: null,
+      &quot;evidence_refs&quot;: [],
+      &quot;provider_accepted&quot;: true,
+      &quot;delivery&quot;: &quot;KNOWN&quot;,
+      &quot;reached_ringing&quot;: &quot;TRUE&quot;,
+      &quot;terminal_cause&quot;: &quot;ACKNOWLEDGED&quot;,
+      &quot;retry_safe&quot;: &quot;FALSE&quot;
+    }
+  },
+  &quot;component_sha256&quot;: {
+    &quot;event&quot;: &quot;8cd5251a834feee18d4a5090d7e1d9784a18caad60fefcb8cb8deadc5d38d591&quot;,
+    &quot;lease&quot;: &quot;96031a308a847fcd93bc2d027108fe802d9d5dee66acfef8ff164143b6679442&quot;,
+    &quot;finding&quot;: &quot;b208c200f62fb3d37fb70cd8e56497526e09db2caa02bd80f41be7770cda5d2b&quot;,
+    &quot;action&quot;: &quot;43f3c02dd7b22e90eeac6666cb83b0fe73af8e7589fecbd854ae064e6df1954c&quot;,
+    &quot;result&quot;: &quot;77aeba8043aff5c89a131d6b221f46db384eaae16ff3e08b3ed4397724073178&quot;
+  },
+  &quot;previous_receipt_sha256&quot;: null,
+  &quot;limitations&quot;: [
+    &quot;Integrity verification does not replay external provider behavior.&quot;,
+    &quot;An unanchored append-only chain cannot detect tail truncation.&quot;
+  ],
+  &quot;receipt_sha256&quot;: &quot;bb098d54cca0aaa77916284b3ba5a0d33ef4dad269d105d70871758dd8df09e0&quot;
+}</pre>
+    </div>
+</div>
+
+<!-- Status Bar -->
+<div class="status-bar">
+    <span class="section">Schema: evidence-receipt/1</span>
+    <span class="section">Components: 5</span>
+    <span class="section" id="status-verify">Ready</span>
+</div>
+
+</div><!-- /window -->
+
+<!-- Evidence JSON embedded for verification -->
+<script id="otp-evidence" type="application/json">{
+  &amp;quot;schema_version&amp;quot;: &amp;quot;evidence-receipt/1&amp;quot;,
+  &amp;quot;execution_id&amp;quot;: &amp;quot;exec_demo_001&amp;quot;,
+  &amp;quot;source_adapter&amp;quot;: &amp;quot;roadstar-workbook-v0&amp;quot;,
+  &amp;quot;policy_version&amp;quot;: &amp;quot;ack-lease-v0&amp;quot;,
+  &amp;quot;channel_adapter&amp;quot;: &amp;quot;mock&amp;quot;,
+  &amp;quot;verdict&amp;quot;: &amp;quot;ACTION_REQUESTED&amp;quot;,
+  &amp;quot;components&amp;quot;: {
+    &amp;quot;event&amp;quot;: {
+      &amp;quot;event_id&amp;quot;: &amp;quot;evt_175c1bc3e1b0d5c93c52&amp;quot;,
+      &amp;quot;schema_version&amp;quot;: &amp;quot;operational-event/1&amp;quot;,
+      &amp;quot;source&amp;quot;: &amp;quot;roadstar&amp;quot;,
+      &amp;quot;source_event_type&amp;quot;: &amp;quot;dispatch.leg_observed&amp;quot;,
+      &amp;quot;source_ref&amp;quot;: &amp;quot;TRIP-001:LEG-001A&amp;quot;,
+      &amp;quot;entity_type&amp;quot;: &amp;quot;dispatch_leg&amp;quot;,
+      &amp;quot;entity_id&amp;quot;: &amp;quot;LEG-001A&amp;quot;,
+      &amp;quot;observed_at&amp;quot;: &amp;quot;2026-09-10T13:55:00Z&amp;quot;,
+      &amp;quot;payload&amp;quot;: {
+        &amp;quot;trip_ref&amp;quot;: &amp;quot;TRIP-001&amp;quot;,
+        &amp;quot;leg_ref&amp;quot;: &amp;quot;LEG-001A&amp;quot;,
+        &amp;quot;expected_at&amp;quot;: &amp;quot;2026-09-10T14:00:00Z&amp;quot;,
+        &amp;quot;due_at&amp;quot;: &amp;quot;2026-09-10T14:30:00Z&amp;quot;,
+        &amp;quot;latest_state_at&amp;quot;: &amp;quot;2026-09-10T13:55:00Z&amp;quot;,
+        &amp;quot;operation_status&amp;quot;: &amp;quot;IN_TRANSIT&amp;quot;,
+        &amp;quot;contact_ref&amp;quot;: &amp;quot;driver@example.com&amp;quot;,
+        &amp;quot;ack_due_at&amp;quot;: &amp;quot;2026-09-10T14:00:00Z&amp;quot;
+      },
+      &amp;quot;payload_sha256&amp;quot;: &amp;quot;a4171e56ea3412fa43d8a5155ea757cfea83c56efbd4e3ca8d29d06a0a07a183&amp;quot;,
+      &amp;quot;evidence_refs&amp;quot;: []
+    },
+    &amp;quot;lease&amp;quot;: {
+      &amp;quot;lease_id&amp;quot;: &amp;quot;lease_461c0951b801f0b3cb91&amp;quot;,
+      &amp;quot;kind&amp;quot;: &amp;quot;acknowledgement&amp;quot;,
+      &amp;quot;subject_ref&amp;quot;: &amp;quot;LEG-001A&amp;quot;,
+      &amp;quot;opened_at&amp;quot;: &amp;quot;2026-09-10T13:55:00Z&amp;quot;,
+      &amp;quot;due_at&amp;quot;: &amp;quot;2026-09-10T14:00:00Z&amp;quot;,
+      &amp;quot;state&amp;quot;: &amp;quot;OPEN&amp;quot;,
+      &amp;quot;required_condition&amp;quot;: &amp;quot;acknowledged&amp;quot;,
+      &amp;quot;resolution&amp;quot;: null,
+      &amp;quot;closed_at&amp;quot;: null
+    },
+    &amp;quot;finding&amp;quot;: {
+      &amp;quot;finding_id&amp;quot;: &amp;quot;finding_658c6b05f34a58be1c66&amp;quot;,
+      &amp;quot;rule_id&amp;quot;: &amp;quot;ack-lease-v0&amp;quot;,
+      &amp;quot;status&amp;quot;: &amp;quot;FAIL&amp;quot;,
+      &amp;quot;severity&amp;quot;: &amp;quot;HIGH&amp;quot;,
+      &amp;quot;subject_ref&amp;quot;: &amp;quot;LEG-001A&amp;quot;,
+      &amp;quot;reason_code&amp;quot;: &amp;quot;ACK_LEASE_EXPIRED&amp;quot;,
+      &amp;quot;reason&amp;quot;: &amp;quot;Acknowledgement was not observed by the deadline.&amp;quot;,
+      &amp;quot;evidence_refs&amp;quot;: [
+        &amp;quot;evt_175c1bc3e1b0d5c93c52&amp;quot;,
+        &amp;quot;lease_461c0951b801f0b3cb91&amp;quot;
+      ],
+      &amp;quot;action_recommended&amp;quot;: true
+    },
+    &amp;quot;action&amp;quot;: {
+      &amp;quot;action_id&amp;quot;: &amp;quot;action_466ec75356f6e57607ae&amp;quot;,
+      &amp;quot;action_type&amp;quot;: &amp;quot;notify&amp;quot;,
+      &amp;quot;target_ref&amp;quot;: &amp;quot;driver@example.com&amp;quot;,
+      &amp;quot;channel&amp;quot;: &amp;quot;mock&amp;quot;,
+      &amp;quot;objective&amp;quot;: &amp;quot;Request acknowledgement for an overdue operational assignment.&amp;quot;,
+      &amp;quot;message&amp;quot;: &amp;quot;Please acknowledge assignment TRIP-001:LEG-001A.&amp;quot;,
+      &amp;quot;require_ack&amp;quot;: true,
+      &amp;quot;urgency&amp;quot;: &amp;quot;HIGH&amp;quot;,
+      &amp;quot;source_finding_ids&amp;quot;: [
+        &amp;quot;finding_658c6b05f34a58be1c66&amp;quot;
+      ],
+      &amp;quot;authority_context&amp;quot;: {
+        &amp;quot;communication_allowed&amp;quot;: true,
+        &amp;quot;channel&amp;quot;: &amp;quot;mock&amp;quot;
+      },
+      &amp;quot;metadata&amp;quot;: {}
+    },
+    &amp;quot;result&amp;quot;: {
+      &amp;quot;action_id&amp;quot;: &amp;quot;action_466ec75356f6e57607ae&amp;quot;,
+      &amp;quot;provider&amp;quot;: &amp;quot;mock&amp;quot;,
+      &amp;quot;provider_ref&amp;quot;: &amp;quot;mock-ref-001&amp;quot;,
+      &amp;quot;status&amp;quot;: &amp;quot;ACKNOWLEDGED&amp;quot;,
+      &amp;quot;acknowledged&amp;quot;: true,
+      &amp;quot;response&amp;quot;: &amp;quot;Acknowledged by driver&amp;quot;,
+      &amp;quot;started_at&amp;quot;: &amp;quot;2026-09-10T13:56:00Z&amp;quot;,
+      &amp;quot;completed_at&amp;quot;: &amp;quot;2026-09-10T13:56:05Z&amp;quot;,
+      &amp;quot;error_code&amp;quot;: null,
+      &amp;quot;evidence_refs&amp;quot;: [],
+      &amp;quot;provider_accepted&amp;quot;: true,
+      &amp;quot;delivery&amp;quot;: &amp;quot;KNOWN&amp;quot;,
+      &amp;quot;reached_ringing&amp;quot;: &amp;quot;TRUE&amp;quot;,
+      &amp;quot;terminal_cause&amp;quot;: &amp;quot;ACKNOWLEDGED&amp;quot;,
+      &amp;quot;retry_safe&amp;quot;: &amp;quot;FALSE&amp;quot;
+    }
+  },
+  &amp;quot;component_sha256&amp;quot;: {
+    &amp;quot;event&amp;quot;: &amp;quot;8cd5251a834feee18d4a5090d7e1d9784a18caad60fefcb8cb8deadc5d38d591&amp;quot;,
+    &amp;quot;lease&amp;quot;: &amp;quot;96031a308a847fcd93bc2d027108fe802d9d5dee66acfef8ff164143b6679442&amp;quot;,
+    &amp;quot;finding&amp;quot;: &amp;quot;b208c200f62fb3d37fb70cd8e56497526e09db2caa02bd80f41be7770cda5d2b&amp;quot;,
+    &amp;quot;action&amp;quot;: &amp;quot;43f3c02dd7b22e90eeac6666cb83b0fe73af8e7589fecbd854ae064e6df1954c&amp;quot;,
+    &amp;quot;result&amp;quot;: &amp;quot;77aeba8043aff5c89a131d6b221f46db384eaae16ff3e08b3ed4397724073178&amp;quot;
+  },
+  &amp;quot;previous_receipt_sha256&amp;quot;: null,
+  &amp;quot;limitations&amp;quot;: [
+    &amp;quot;Integrity verification does not replay external provider behavior.&amp;quot;,
+    &amp;quot;An unanchored append-only chain cannot detect tail truncation.&amp;quot;
+  ],
+  &amp;quot;receipt_sha256&amp;quot;: &amp;quot;bb098d54cca0aaa77916284b3ba5a0d33ef4dad269d105d70871758dd8df09e0&amp;quot;
+}</script>
+
+<script>
+// ============================================================
+// OTP EVIDENCE VIEWER — VERIFICATION LOGIC
+// ============================================================
+
+const originalRecord = JSON.parse(document.getElementById('otp-evidence').textContent);
+let currentRecord = JSON.parse(JSON.stringify(originalRecord));
+
+// Canonical JSON (matches Python otp.canonical.canonical_json)
+function canonicalize(value) {
+    if (Array.isArray(value)) return value.map(canonicalize);
+    if (value !== null && typeof value === 'object') {
+        const result = {};
+        Object.keys(value).sort().forEach(key => {
+            result[key] = canonicalize(value[key]);
+        });
+        return result;
+    }
+    return value;
+}
+
+// SHA-256 (matches Python otp.canonical.sha256)
+async function sha256(value) {
+    const canonical = JSON.stringify(canonicalize(value));
+    const encoded = new TextEncoder().encode(canonical);
+    const digest = await crypto.subtle.digest('SHA-256', encoded);
+    return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Verify receipt integrity
+async function verifyReceipt() {
+    const resultEl = document.getElementById('verify-result');
+    const statusEl = document.getElementById('status-verify');
+    resultEl.style.display = 'block';
+    resultEl.className = 'verify-result';
+    resultEl.innerHTML = 'Verifying...';
+    statusEl.textContent = 'Verifying...';
+
+    try {
+        // Compute receipt hash (excluding receipt_sha256 field)
+        const body = {};
+        Object.keys(currentRecord).forEach(key => {
+            if (key !== 'receipt_sha256') body[key] = currentRecord[key];
+        });
+        const computed = await sha256(body);
+        const valid = computed === currentRecord.receipt_sha256;
+
+        // Verify component hashes
+        const components = currentRecord.components || {};
+        const compHashes = currentRecord.component_sha256 || {};
+        const componentResults = {};
+
+        for (const [name, comp] of Object.entries(components)) {
+            const expected = compHashes[name];
+            if (expected && comp) {
+                const actual = await sha256(comp);
+                componentResults[name] = { valid: actual === expected, expected, actual };
+            }
+        }
+
+        const allComponentsValid = Object.values(componentResults).every(r => r.valid);
+
+        if (valid && allComponentsValid) {
+            resultEl.className = 'verify-result verify-valid';
+            resultEl.innerHTML = `
+                <div style="font-size: 14px; margin-bottom: 8px;">✅ RECEIPT VALID</div>
+                <div>Receipt SHA-256: <span class="sha256">${computed}</span></div>
+                <div style="margin-top: 4px;">All ${Object.keys(componentResults).length} component hashes verified.</div>
+            `;
+            statusEl.textContent = '✅ VALID — All hashes match';
+        } else {
+            let html = '<div style="font-size: 14px; margin-bottom: 8px;">❌ VERIFICATION FAILED</div>';
+
+            if (!valid) {
+                html += `<div>Receipt hash mismatch:<br>`;
+                html += `Expected: <span class="sha256">${currentRecord.receipt_sha256}</span><br>`;
+                html += `Computed: <span class="sha256">${computed}</span></div>`;
+            }
+
+            for (const [name, result] of Object.entries(componentResults)) {
+                if (!result.valid) {
+                    html += `<div style="margin-top: 4px;">Component "${name}" hash mismatch:<br>`;
+                    html += `Expected: <span class="sha256">${result.expected}</span><br>`;
+                    html += `Computed: <span class="sha256">${result.actual}</span></div>`;
+                }
+            }
+
+            resultEl.className = 'verify-result verify-invalid';
+            resultEl.innerHTML = html;
+            statusEl.textContent = '❌ INVALID — Hash mismatch';
+        }
+    } catch (e) {
+        resultEl.className = 'verify-result verify-invalid';
+        resultEl.innerHTML = `<div>❌ ERROR: ${e.message}</div>`;
+        statusEl.textContent = '❌ ERROR';
+    }
+}
+
+// Tab switching
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+}
+
+// Component expand/collapse
+function toggleComponent(id) {
+    const el = document.getElementById(id);
+    const arrow = document.getElementById('arrow-' + id);
+    el.classList.toggle('open');
+    arrow.textContent = el.classList.contains('open') ? '▼' : '▶';
+}
+
+// Download evidence
+function downloadEvidence() {
+    const blob = new Blob([JSON.stringify(currentRecord, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = currentRecord.execution_id + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// Copy hash
+function copyHash() {
+    navigator.clipboard.writeText(currentRecord.receipt_sha256);
+    document.getElementById('status-verify').textContent = '📋 Hash copied!';
+    setTimeout(() => {
+        document.getElementById('status-verify').textContent = 'Ready';
+    }, 2000);
+}
+
+// Theme toggle (light mode)
+let darkTheme = true;
+function toggleTheme() {
+    darkTheme = !darkTheme;
+    if (darkTheme) {
+        document.body.style.background = '#ECE9D8';
+        document.querySelectorAll('.component-body pre, .tab-content pre').forEach(el => {
+            el.style.background = '#FFF';
+            el.style.color = '#000';
+        });
+    } else {
+        document.body.style.background = '#1E1E1E';
+        document.querySelectorAll('.component-body pre, .tab-content pre').forEach(el => {
+            el.style.background = '#2D2D2D';
+            el.style.color = '#D4D4D4';
+        });
+    }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'v' || e.key === 'V') verifyReceipt();
+    if (e.key === 'e' || e.key === 'E') downloadEvidence();
+    if (e.key === 'c' || e.key === 'C') copyHash();
+});
+</script>
+
+</body>
+</html>
