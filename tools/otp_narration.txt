@@ -1,0 +1,54 @@
+Operational Trust Pipeline. Uncertain trucking operations become bounded, verifiable acknowledgement requests.
+
+[WAIT 2.5]
+
+Every run flows through six stages. Normalize the road event. Open an acknowledgement lease. Evaluate policy. Let the Sentinel decide. Request action through a channel adapter. And seal everything into a SHA-256 evidence receipt.
+
+[WAIT 12.5]
+
+The evidence viewer renders the exact embedded receipt object. What you see is literally what gets verified, in the browser, fully offline. One click recomputes the receipt hash and every component hash: event, lease, finding, action, result.
+
+[WAIT 18.5]
+
+A truck leaves Milton for London. A slowdown on Highway 401 eats the buffer. At nine forty it crosses the London dock geofence, and the arrival timestamp is persisted. The dock queue grows. On-duty hours drain. At noon, with one hundred forty minutes of waiting, the driver has zero hours left. That is the Dock H-O-S Collision.
+
+[WAIT 18.5]
+
+The first two hours at the dock are free. After that, every minute bills automatically from the recorded timestamps. One hundred fifty minutes of waiting means thirty billable minutes. No dispatcher has to remember to log anything. The geofence already did.
+
+[WAIT 16.5]
+
+After delivery in London, the matcher ranks real return loads from the workbook. A Milton to Kitchener load minimizes deadhead. Every rejection carries a reason code. The dispatcher always decides. The system never auto-assigns.
+
+[WAIT 16.5]
+
+The same pipeline exists as a single C eighty-nine file. Same semantics, no Python, no Qt, no network. Python and C produce identical findings and verdicts from the same fixtures. Features may degrade. Semantics must not.
+
+[WAIT 13.1]
+
+One hundred fifty-six tests pass. The evidence chain verifies offline. That is operational trust you can check, not claims you must believe.
+
+# --- timed text overlays (absolute, must fit inside 202s source) ---
+[AT 00:00]
+[TEXT "OPERATIONAL TRUST PIPELINE" 4.0]
+
+[AT 00:08]
+[TEXT "6 STAGES, 1 RECEIPT" 4.0]
+
+[AT 00:32]
+[TEXT "UI = projection(receipt)" 4.0]
+
+[AT 01:00]
+[TEXT "DOCK/HOS COLLISION" 4.0]
+
+[AT 01:36]
+[TEXT "DETENTION AUTO-BILLED" 4.0]
+
+[AT 02:08]
+[TEXT "Milton -> Kitchener" 4.0]
+
+[AT 02:36]
+[TEXT "PYTHON == C" 4.0]
+
+[AT 03:00]
+[TEXT "156 TESTS PASS" 4.0]
