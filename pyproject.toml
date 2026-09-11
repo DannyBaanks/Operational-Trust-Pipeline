@@ -22,4 +22,3 @@ otp = "otp.cli:main"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-qt_api = "pyside6"

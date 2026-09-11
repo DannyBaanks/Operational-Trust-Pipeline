@@ -9,6 +9,7 @@ FEATURES MAY DEGRADE. SEMANTICS MUST NOT.
 """
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -21,7 +22,9 @@ from otp.canonical import sha256
 
 
 FIXTURES_DIR = Path(__file__).parent.parent / "otp_portable" / "test_fixtures"
-C_BINARY = Path(__file__).parent.parent / "otp_portable" / "otp.exe"
+C_BINARY = Path(__file__).parent.parent / "otp_portable" / (
+    "otp.exe" if os.name == "nt" else "otp"
+)
 
 
 @pytest.fixture

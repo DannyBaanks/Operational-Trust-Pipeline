@@ -11,7 +11,7 @@ RoadStar data → normalize → evaluate → lease/policy → Sentinel → actio
 ## Quick Start
 
 ```bash
-# Run tests (107 passing)
+# Run tests (114 passed, 1 skipped locally)
 py -m pytest -q
 
 # Deterministic demo (mock channel, no network, persists to ~/.otp/otp.db)
@@ -164,7 +164,7 @@ otp drive disconnect    # remove token
 | CalleChannel | Optional | CALL-E telephony (live=False by default) |
 | Google Drive | **Active** | Evidence persistence (OAuth2, user's own Drive) |
 
-## Hackathon Demo (90 seconds)
+## Hackathon Demo (3-5 minutes)
 
 1. `otp gui` — window opens maximized, trips sorted by delta
 2. Trip 28471 is red: ETA 14:32 > DELIVER_BY 14:05 (+27 min)
@@ -215,7 +215,7 @@ src/otp/
 ## Tests
 
 ```bash
-py -m pytest -q          # 107 passed, 1 skipped
+py -m pytest -q          # local result: 114 passed, 1 skipped
 py -m pytest -v          # verbose
 py -m pytest -k gui      # GUI unit tests only
 py -m pytest -k drive    # Drive sync tests (mocked)
