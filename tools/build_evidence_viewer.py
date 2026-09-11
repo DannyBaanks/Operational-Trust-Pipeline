@@ -29,16 +29,16 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-body {{
+body {
     font-family: Tahoma, "MS Sans Serif", Arial, sans-serif;
     font-size: 11px;
     background: #ECE9D8;
     color: #000;
     min-height: 100vh;
-}}
+}
 
 /* Title bar */
-.title-bar {{
+.title-bar {
     background: linear-gradient(180deg, #0A246A 0%, #3C82D6 8%, #0A246A 100%);
     color: white;
     padding: 4px 8px;
@@ -47,10 +47,10 @@ body {{
     display: flex;
     align-items: center;
     gap: 8px;
-}}
-.title-bar .icon {{ font-size: 16px; }}
-.title-bar .title {{ flex: 1; }}
-.title-bar .close {{
+}
+.title-bar .icon { font-size: 16px; }
+.title-bar .title { flex: 1; }
+.title-bar .close {
     background: #C0392B;
     color: white;
     border: 1px outset #E74C3C;
@@ -58,35 +58,35 @@ body {{
     font-size: 11px;
     font-weight: bold;
     cursor: pointer;
-}}
-.title-bar .close:hover {{ background: #E74C3C; }}
+}
+.title-bar .close:hover { background: #E74C3C; }
 
 /* Window frame */
-.window {{
+.window {
     border: 2px outset #D4D0C8;
     margin: 4px;
     background: #ECE9D8;
-}}
+}
 
 /* Menu bar */
-.menu-bar {{
+.menu-bar {
     background: #ECE9D8;
     border-bottom: 1px solid #ACA899;
     padding: 2px 4px;
     display: flex;
     gap: 0;
-}}
-.menu-bar .menu-item {{
+}
+.menu-bar .menu-item {
     padding: 2px 8px;
     cursor: pointer;
-}}
-.menu-bar .menu-item:hover {{
+}
+.menu-bar .menu-item:hover {
     background: #316AC5;
     color: white;
-}}
+}
 
 /* Status bar */
-.status-bar {{
+.status-bar {
     background: #ECE9D8;
     border-top: 1px solid #ACA899;
     padding: 2px 8px;
@@ -94,21 +94,21 @@ body {{
     color: #444;
     display: flex;
     gap: 16px;
-}}
-.status-bar .section {{
+}
+.status-bar .section {
     border: 1px inset #D4D0C8;
     padding: 1px 6px;
     flex: 1;
-}}
+}
 
 /* Tab control */
-.tabs {{
+.tabs {
     display: flex;
     border-bottom: 1px solid #ACA899;
     padding: 0 4px;
     background: #ECE9D8;
-}}
-.tab {{
+}
+.tab {
     padding: 4px 12px;
     border: 1px solid #ACA899;
     border-bottom: none;
@@ -117,33 +117,33 @@ body {{
     margin-right: 2px;
     position: relative;
     top: 1px;
-}}
-.tab.active {{
+}
+.tab.active {
     background: #ECE9D8;
     border-bottom: 1px solid #ECE9D8;
     font-weight: bold;
-}}
-.tab:hover:not(.active) {{
+}
+.tab:hover:not(.active) {
     background: #C8C4BC;
-}}
+}
 
 /* Tab content */
-.tab-content {{
+.tab-content {
     display: none;
     padding: 8px;
-}}
-.tab-content.active {{
+}
+.tab-content.active {
     display: block;
-}}
+}
 
 /* Group box */
-.group-box {{
+.group-box {
     border: 1px solid #ACA899;
     margin: 8px 0;
     padding: 12px 8px 8px 8px;
     position: relative;
-}}
-.group-box .label {{
+}
+.group-box .label {
     background: #ECE9D8;
     padding: 0 4px;
     position: absolute;
@@ -151,62 +151,62 @@ body {{
     left: 8px;
     font-weight: bold;
     font-size: 11px;
-}}
+}
 
 /* Fields */
-.field {{
+.field {
     display: flex;
     margin: 3px 0;
     align-items: flex-start;
-}}
-.field-label {{
+}
+.field-label {
     width: 140px;
     font-weight: bold;
     color: #003399;
     flex-shrink: 0;
-}}
-.field-value {{
+}
+.field-value {
     flex: 1;
     word-break: break-all;
-}}
-.field-value code {{
+}
+.field-value code {
     background: #FFF;
     border: 1px inset #D4D0C8;
     padding: 1px 4px;
     font-family: "Lucida Console", "Courier New", monospace;
     font-size: 10px;
-}}
+}
 
 /* Verdict badge */
-.verdict {{
+.verdict {
     display: inline-block;
     padding: 2px 8px;
     font-weight: bold;
     border: 2px outset;
     font-size: 12px;
-}}
-.verdict-ACTION_REQUESTED {{ background: #FF6B6B; color: #000; border-color: #FF8888; }}
-.verdict-NO_ACTION {{ background: #90EE90; color: #000; border-color: #98FB98; }}
-.verdict-BLOCKED {{ background: #FFB347; color: #000; border-color: #FFC87C; }}
-.verdict-NEEDS_REVIEW {{ background: #FFD700; color: #000; border-color: #FFE44D; }}
-.verdict-NOT_DEMONSTRATED {{ background: #D3D3D3; color: #000; border-color: #DCDCDC; }}
+}
+.verdict-ACTION_REQUESTED { background: #FF6B6B; color: #000; border-color: #FF8888; }
+.verdict-NO_ACTION { background: #90EE90; color: #000; border-color: #98FB98; }
+.verdict-BLOCKED { background: #FFB347; color: #000; border-color: #FFC87C; }
+.verdict-NEEDS_REVIEW { background: #FFD700; color: #000; border-color: #FFE44D; }
+.verdict-NOT_DEMONSTRATED { background: #D3D3D3; color: #000; border-color: #DCDCDC; }
 
 /* Finding status */
-.status-PASS {{ color: #008000; font-weight: bold; }}
-.status-FAIL {{ color: #CC0000; font-weight: bold; }}
-.status-UNKNOWN {{ color: #666; font-style: italic; }}
+.status-PASS { color: #008000; font-weight: bold; }
+.status-FAIL { color: #CC0000; font-weight: bold; }
+.status-UNKNOWN { color: #666; font-style: italic; }
 
 /* Severity */
-.severity-HIGH {{ color: #CC0000; font-weight: bold; }}
-.severity-INFO {{ color: #0066CC; }}
+.severity-HIGH { color: #CC0000; font-weight: bold; }
+.severity-INFO { color: #0066CC; }
 
 /* Component cards */
-.component {{
+.component {
     border: 1px solid #ACA899;
     margin: 4px 0;
     background: #FFF;
-}}
-.component-header {{
+}
+.component-header {
     background: #E8E4DC;
     padding: 4px 8px;
     font-weight: bold;
@@ -215,21 +215,21 @@ body {{
     display: flex;
     align-items: center;
     gap: 8px;
-}}
-.component-header:hover {{
+}
+.component-header:hover {
     background: #D8D4CC;
-}}
-.component-header .arrow {{
+}
+.component-header .arrow {
     font-size: 8px;
-}}
-.component-body {{
+}
+.component-body {
     padding: 8px;
     display: none;
-}}
-.component-body.open {{
+}
+.component-body.open {
     display: block;
-}}
-.component-body pre {{
+}
+.component-body pre {
     background: #FFF;
     border: 1px inset #D4D0C8;
     padding: 4px;
@@ -240,66 +240,66 @@ body {{
     word-break: break-all;
     max-height: 300px;
     overflow-y: auto;
-}}
+}
 
 /* SHA-256 display */
-.sha256 {{
+.sha256 {
     font-family: "Lucida Console", "Courier New", monospace;
     font-size: 10px;
     background: #F5F5DC;
     border: 1px inset #D4D0C8;
     padding: 2px 4px;
     word-break: break-all;
-}}
+}
 
 /* Verification button */
-.verify-btn {{
+.verify-btn {
     background: #D4D0C8;
     border: 2px outset #D4D0C8;
     padding: 4px 16px;
     font-family: Tahoma, "MS Sans Serif", Arial, sans-serif;
     font-size: 11px;
     cursor: pointer;
-}}
-.verify-btn:hover {{
+}
+.verify-btn:hover {
     background: #C8C4BC;
-}}
-.verify-btn:active {{
+}
+.verify-btn:active {
     border-style: inset;
-}}
+}
 
 /* Verification result */
-.verify-result {{
+.verify-result {
     margin: 8px 0;
     padding: 8px;
     border: 2px inset #D4D0C8;
     font-weight: bold;
-}}
-.verify-valid {{
+}
+.verify-valid {
     background: #90EE90;
     color: #006400;
-}}
-.verify-invalid {{
+}
+.verify-invalid {
     background: #FFB3B3;
     color: #8B0000;
-}}
+}
 
 /* Limitations box */
-.limitations {{
+.limitations {
     background: #FFFACD;
     border: 1px solid #DAA520;
     padding: 8px;
     margin: 8px 0;
     font-size: 10px;
-}}
-.limitations .title {{
+}
+.limitations .title {
     font-weight: bold;
     color: #8B4513;
     margin-bottom: 4px;
-}}
+}
 
 /* Ledger chain */
-.ledger-chain {{
+.ledger-chain {
     font-family: "Lucida Console", "Courier New", monospace;
     font-size: 9px;
     background: #1E1E1E;
@@ -308,21 +308,21 @@ body {{
     border: 2px inset #444;
     overflow-x: auto;
     white-space: pre;
-}}
+}
 
 /* XP-style scrollbar */
-::-webkit-scrollbar {{ width: 16px; height: 16px; }}
-::-webkit-scrollbar-track {{ background: #ECE9D8; border: 1px inset #D4D0C8; }}
-::-webkit-scrollbar-thumb {{
+::-webkit-scrollbar { width: 16px; height: 16px; }
+::-webkit-scrollbar-track { background: #ECE9D8; border: 1px inset #D4D0C8; }
+::-webkit-scrollbar-thumb {
     background: #D4D0C8;
     border: 2px outset #D4D0C8;
-}}
-::-webkit-scrollbar-thumb:hover {{ background: #C8C4BC; }}
-::-webkit-scrollbar-button {{
+}
+::-webkit-scrollbar-thumb:hover { background: #C8C4BC; }
+::-webkit-scrollbar-button {
     background: #D4D0C8;
     border: 1px outset #D4D0C8;
     height: 16px;
-}}
+}
 </style>
 </head>
 <body>
