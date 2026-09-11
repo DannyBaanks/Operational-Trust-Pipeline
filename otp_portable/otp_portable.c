@@ -889,15 +889,207 @@ int otp_run_csv(const char *csv_path, int communication_allowed) {
 }
 
 /* ================================================================== */
+/*  JSON MINIMAL PARSER                                                */
+/* ================================================================== */
+
+/* Find a key in a JSON string and return pointer to its value */
+static const char *json_find_key(const char *json, const char *key) {
+    char search[128];
+    const char *p;
+    snprintf(search, sizeof(search), "\"%s\"", key);
+    p = strstr(json, search);
+    if (!p) return NULL;
+    p += strlen(search);
+    while (*p == ' ' || *p == ':') p++;
+    return p;
+}
+
+int json_get_string(const char *json, const char *key, char *out, int outsize) {
+    const char *p = json_find_key(json, key);
+    int i = 0;
+    if (!p) return 0;
+    if (*p == '"') {
+        p++;
+        while (*p && *p != '"' && i < outsize - 1) {
+            if (*p == '\\') { p++; }
+            out[i++] = *p++;
+        }
+    } else {
+        while (*p && *p != ',' && *p != '}' && *p != '\n' && i < outsize - 1) {
+            out[i++] = *p++;
+        }
+    }
+    out[i] = '\0';
+    return i > 0;
+}
+
+int json_get_int(const char *json, const char *key, int *out) {
+    const char *p = json_find_key(json, key);
+    int neg = 0;
+    int val = 0;
+    if (!p) return 0;
+    if (*p == '-') { neg = 1; p++; }
+    while (*p >= '0' && *p <= '9') {
+        val = val * 10 + (*p - '0');
+        p++;
+    }
+    *out = neg ? -val : val;
+    return 1;
+}
+
+int json_get_bool(const char *json, const char *key, int *out) {
+    const char *p = json_find_key(json, key);
+    if (!p) return 0;
+    if (strncmp(p, "true", 4) == 0) { *out = 1; return 1; }
+    if (strncmp(p, "false", 5) == 0) { *out = 0; return 1; }
+    return 0;
+}
+
+int json_get_object(const char *json, const char *key, char *out, int outsize) {
+    const char *p = json_find_key(json, key);
+    int depth = 0, i = 0;
+    if (!p || *p != '{') return 0;
+    while (*p && i < outsize - 1) {
+        out[i++] = *p;
+        if (*p == '{') depth++;
+        else if (*p == '}') { depth--; if (depth == 0) { p++; break; } }
+        p++;
+    }
+    out[i] = '\0';
+    return i > 0;
+}
+
+int otp_event_from_json(const char *json, OtpEvent *out) {
+    otp_event_init(out);
+    json_get_string(json, "source", out->source, OTP_MAX_STR);
+    json_get_string(json, "source_event_type", out->source_event_type, OTP_MAX_STR);
+    json_get_string(json, "source_ref", out->source_ref, OTP_MAX_STR);
+    json_get_string(json, "entity_type", out->entity_type, OTP_MAX_STR);
+    json_get_string(json, "entity_id", out->entity_id, OTP_MAX_STR);
+    json_get_string(json, "observed_at", out->observed_at, OTP_MAX_TIMESTAMP);
+
+    /* Parse nested payload */
+    {
+        char payload[OTP_MAX_PAYLOAD];
+        if (json_get_object(json, "payload", payload, sizeof(payload))) {
+            json_get_string(payload, "trip_ref", out->payload_trip_ref, OTP_MAX_STR);
+            json_get_string(payload, "leg_ref", out->payload_leg_ref, OTP_MAX_STR);
+            json_get_string(payload, "expected_at", out->payload_expected_at, OTP_MAX_TIMESTAMP);
+            json_get_string(payload, "due_at", out->payload_due_at, OTP_MAX_TIMESTAMP);
+            json_get_string(payload, "latest_state_at", out->payload_latest_state_at, OTP_MAX_TIMESTAMP);
+            json_get_string(payload, "operation_status", out->payload_operation_status, OTP_MAX_STR);
+            json_get_string(payload, "contact_ref", out->payload_contact_ref, OTP_MAX_STR);
+            json_get_string(payload, "ack_due_at", out->payload_ack_due_at, OTP_MAX_TIMESTAMP);
+            json_get_string(payload, "acknowledged_at", out->payload_acknowledged_at, OTP_MAX_TIMESTAMP);
+            json_get_string(payload, "remaining_hours", out->payload_remaining_hours, OTP_MAX_STR);
+        }
+    }
+    otp_event_compute_id(out);
+    return 1;
+}
+
+int otp_event_to_json(char *buf, int bufsize, const OtpEvent *e) {
+    return snprintf(buf, (size_t)bufsize,
+        "{\"event_id\":\"%s\","
+        "\"schema_version\":\"%s\","
+        "\"source\":\"%s\","
+        "\"source_event_type\":\"%s\","
+        "\"source_ref\":\"%s\","
+        "\"entity_type\":\"%s\","
+        "\"entity_id\":\"%s\","
+        "\"observed_at\":\"%s\","
+        "\"payload_sha256\":\"%s\"}",
+        e->event_id, e->schema_version, e->source,
+        e->source_event_type, e->source_ref,
+        e->entity_type, e->entity_id, e->observed_at,
+        e->payload_sha256);
+}
+
+int otp_finding_to_json(char *buf, int bufsize, const OtpFinding *f) {
+    return snprintf(buf, (size_t)bufsize,
+        "{\"finding_id\":\"%s\","
+        "\"rule_id\":\"%s\","
+        "\"status\":%d,"
+        "\"severity\":\"%s\","
+        "\"subject_ref\":\"%s\","
+        "\"reason_code\":\"%s\","
+        "\"reason\":\"%s\","
+        "\"action_recommended\":%s}",
+        f->finding_id, f->rule_id, f->status,
+        f->severity, f->subject_ref,
+        f->reason_code, f->reason,
+        f->action_recommended ? "true" : "false");
+}
+
+/* ================================================================== */
+/*  CLI: verify parity                                                 */
+/* ================================================================== */
+
+int otp_verify_parity(const char *fixture_path) {
+    FILE *f;
+    long fsize;
+    char *json;
+    OtpEvent event;
+    OtpLease lease;
+    OtpFinding finding;
+    OtpSentinelVerdict verdict;
+    OtpActionRequest action;
+    char event_json[2048];
+    char finding_json[2048];
+    int comm_allowed = 1;
+
+    f = fopen(fixture_path, "r");
+    if (!f) {
+        fprintf(stderr, "ERROR: cannot open %s\n", fixture_path);
+        return 1;
+    }
+
+    /* Read entire file */
+    fseek(f, 0, SEEK_END);
+    fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    json = (char *)malloc((size_t)fsize + 1);
+    if (!json) { fclose(f); return 1; }
+    fread(json, 1, (size_t)fsize, f);
+    json[fsize] = '\0';
+    fclose(f);
+
+    /* Parse event from JSON */
+    otp_event_from_json(json, &event);
+    free(json);
+
+    /* Run pipeline */
+    otp_make_ack_lease(&event, otp_clock_system, &lease);
+    otp_evaluate_ack(&event, &lease, otp_clock_system, comm_allowed,
+                     &finding, &verdict, &action);
+
+    /* Output as JSON for comparison */
+    otp_event_to_json(event_json, sizeof(event_json), &event);
+    otp_finding_to_json(finding_json, sizeof(finding_json), &finding);
+
+    printf("{\n");
+    printf("  \"event\": %s,\n", event_json);
+    printf("  \"lease_id\": \"%s\",\n", lease.lease_id);
+    printf("  \"finding\": %s,\n", finding_json);
+    printf("  \"verdict\": %d,\n", verdict);
+    printf("  \"action_id\": \"%s\"\n",
+           verdict == VERDICT_ACTION_REQUESTED ? action.action_id : "");
+    printf("}\n");
+
+    return 0;
+}
+
+/* ================================================================== */
 /*  MAIN                                                               */
 /* ================================================================== */
 
 static void print_usage(void) {
     printf("OTP Portable %s (C89)\n", OTP_VERSION);
     printf("Usage:\n");
-    printf("  otp run <file.csv>        Process a CSV file\n");
-    printf("  otp doctor                Show feature discovery\n");
-    printf("  otp version               Show version\n");
+    printf("  otp run <file.csv>           Process a CSV file\n");
+    printf("  otp verify <fixture.json>    Verify domain parity\n");
+    printf("  otp doctor                   Show feature discovery\n");
+    printf("  otp version                  Show version\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -912,6 +1104,14 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         return otp_run_csv(argv[2], 1);
+    }
+
+    if (otp_str_eq(argv[1], "verify")) {
+        if (argc < 3) {
+            fprintf(stderr, "ERROR: otp verify requires a JSON fixture file\n");
+            return 1;
+        }
+        return otp_verify_parity(argv[2]);
     }
 
     if (otp_str_eq(argv[1], "doctor")) {

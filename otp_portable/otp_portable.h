@@ -381,11 +381,37 @@ void otp_normalize_dispatch(const OtpRawRecord *raw, OtpEvent *out);
 void otp_normalize_driver(const OtpRawRecord *raw, OtpEvent *out);
 
 /* ------------------------------------------------------------------ */
+/*  JSON (minimal parser for fixtures)                                 */
+/* ------------------------------------------------------------------ */
+
+/* Parse a JSON string and extract a value by key.
+ * Returns 1 if found, 0 if not. Handles string/number/bool/null values.
+ * For nested objects, out_buf receives the raw JSON substring. */
+int json_get_string(const char *json, const char *key, char *out, int outsize);
+int json_get_int(const char *json, const char *key, int *out);
+int json_get_bool(const char *json, const char *key, int *out);
+
+/* Extract a nested object by key (raw JSON substring) */
+int json_get_object(const char *json, const char *key, char *out, int outsize);
+
+/* Parse a JSON event file into OtpEvent */
+int otp_event_from_json(const char *json, OtpEvent *out);
+
+/* Serialize event to JSON */
+int otp_event_to_json(char *buf, int bufsize, const OtpEvent *e);
+
+/* Serialize finding to JSON */
+int otp_finding_to_json(char *buf, int bufsize, const OtpFinding *f);
+
+/* ------------------------------------------------------------------ */
 /*  CLI                                                                */
 /* ------------------------------------------------------------------ */
 
 /* Run the pipeline on a CSV file, output to stdout */
 int otp_run_csv(const char *csv_path, int communication_allowed);
+
+/* Verify parity: read JSON fixture, run pipeline, compare */
+int otp_verify_parity(const char *fixture_path);
 
 /* Doctor: show feature discovery */
 void otp_doctor(void);

@@ -326,7 +326,26 @@ Available:
 | SQLite persistence | Yes | Optional |
 | LAN transport | Yes | Optional |
 | Evidence receipts | Yes | Yes |
-| Domain parity | Reference | Identical semantics |
+| Domain parity | Reference | **Identical semantics** ✓ |
+
+### Domain Parity
+
+Python and C produce identical semantic outputs from the same JSON fixtures:
+
+```
+payload_sha256          ✓ identical
+finding.status          ✓ identical
+finding.reason_code     ✓ identical
+finding.action_recommended ✓ identical
+sentinel verdict        ✓ identical
+```
+
+IDs differ (canonical JSON serialization differs), but **semantics are identical**.
+
+```bash
+# Verify parity
+py -m pytest tests/test_domain_parity.py -v
+```
 
 ### Files
 
