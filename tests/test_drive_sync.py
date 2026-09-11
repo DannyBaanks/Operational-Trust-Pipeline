@@ -8,7 +8,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from otp.drive_sync import DriveSync, CONFIG_DIR, TOKEN_FILE, SYNC_STATE_FILE
+try:
+    from otp.drive_sync import DriveSync, CONFIG_DIR, TOKEN_FILE, SYNC_STATE_FILE
+    HAS_GOOGLE = True
+except ImportError:
+    HAS_GOOGLE = False
+
+pytestmark = pytest.mark.skipif(not HAS_GOOGLE, reason="google-auth not installed")
 
 
 @pytest.fixture
