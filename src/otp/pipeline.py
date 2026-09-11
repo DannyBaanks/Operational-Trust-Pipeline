@@ -9,6 +9,12 @@ from .contracts import ChannelProvider, Clock
 from .domain import ActionRequest, ActionResult, Finding, FindingStatus, Lease, LeaseState, OperationalEvent, SentinelVerdict, make_lease
 
 
+class SystemClock:
+    """Real-time clock."""
+    def now(self) -> datetime:
+        return datetime.now(timezone.utc)
+
+
 class FixedClock:
     def __init__(self, instant: str) -> None: self.instant = datetime.fromisoformat(instant.replace("Z", "+00:00"))
     def now(self) -> datetime: return self.instant
@@ -79,16 +85,47 @@ def execution_id(event: OperationalEvent, lease: Lease, policy: AckLeasePolicy) 
     return stable_id("exec", {"event": sha256(event), "state": sha256(lease), "policy": policy.version, "operation": "evaluate"})
 
 
-def run_ack_lease(event: OperationalEvent, clock: Clock, channel: ChannelProvider, authority_context: dict[str, Any]) -> dict[str, Any]:
-    lease = make_lease("acknowledgement", event.entity_id, event.observed_at, event.payload.get("ack_due_at"), "acknowledged")
-    policy = AckLeasePolicy(); finding = policy.evaluate(event, lease, clock); verdict = sentinel(finding, authority_context)
+# ---------------------------------------------------------------------------
+# Pure decision helpers. No side effects. No channel calls. No persistence.
+# ---------------------------------------------------------------------------
+
+def make_ack_lease(event: OperationalEvent, clock: Clock) -> Lease:
+    """Pure: create acknowledgement lease from event."""
+    return make_lease("acknowledgement", event.entity_id, event.observed_at,
+                      event.payload.get("ack_due_at"), "acknowledged")
+
+
+def evaluate_ack(event: OperationalEvent, lease: Lease, clock: Clock,
+                 authority_context: dict[str, Any]) -> tuple[Finding, SentinelVerdict, ActionRequest | None]:
+    """Pure: evaluate policy, return (finding, verdict, action_or_none)."""
+    policy = AckLeasePolicy()
+    finding = policy.evaluate(event, lease, clock)
+    verdict = sentinel(finding, authority_context)
     action = request_for(finding, event, authority_context) if verdict is SentinelVerdict.ACTION_REQUESTED else None
-    result = channel.send(action) if action else None
-    # Recipient-side acknowledgement only. Provider-side "accepted" or
-    # "NO ANSWER / 0s" does not satisfy an acknowledgement lease.
+    return finding, verdict, action
+
+
+def resolve_ack_lease(lease: Lease, finding: Finding, result: ActionResult | None,
+                      clock: Clock) -> Lease:
+    """Pure: resolve lease state based on result. Returns lease unchanged if no transition."""
     if result and result.recipient_acknowledged():
-        lease = replace(lease, state=LeaseState.SATISFIED, resolution="recipient_acknowledgement", closed_at=clock.now().isoformat().replace("+00:00", "Z"))
+        return replace(lease, state=LeaseState.SATISFIED, resolution="recipient_acknowledgement",
+                       closed_at=clock.now().isoformat().replace("+00:00", "Z"))
     elif finding.reason_code == "ACK_LEASE_EXPIRED":
-        lease = replace(lease, state=LeaseState.EXPIRED)
-    return {"execution_id": execution_id(event, lease, policy), "event": event, "lease": lease, "finding": finding,
-            "verdict": verdict, "action": action, "result": result, "policy_version": policy.version, "source_adapter": "roadstar-fixture-v0", "channel_adapter": channel.identity}
+        return replace(lease, state=LeaseState.EXPIRED)
+    return lease
+
+
+# ---------------------------------------------------------------------------
+# Legacy effectful wrapper. Calls channel.send(). Kept for backwards compat.
+# Canonical durable path is OperationalRunner in runner.py.
+# ---------------------------------------------------------------------------
+
+def run_ack_lease(event: OperationalEvent, clock: Clock, channel: ChannelProvider, authority_context: dict[str, Any]) -> dict[str, Any]:
+    lease = make_ack_lease(event, clock)
+    finding, verdict, action = evaluate_ack(event, lease, clock, authority_context)
+    result = channel.send(action) if action else None
+    lease = resolve_ack_lease(lease, finding, result, clock)
+    return {"execution_id": execution_id(event, lease, AckLeasePolicy()), "event": event, "lease": lease, "finding": finding,
+            "verdict": verdict, "action": action, "result": result, "policy_version": AckLeasePolicy.version,
+            "source_adapter": event.source, "channel_adapter": channel.identity}
