@@ -372,7 +372,7 @@ otp_portable/
 - [x] Ephemeral mode for tests
 - [x] OTP Portable (C89 single-file, domain parity)
 - [ ] CALL-E integration (optional, not a dependency)
-- [ ] Shared test fixtures (Python ↔ C domain parity verification)
+- [x] Shared test fixtures (Python ↔ C domain parity verification)
 
 ## License
 
