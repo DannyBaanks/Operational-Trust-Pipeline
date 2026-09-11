@@ -70,10 +70,21 @@ def run_python_pipeline(fixture_data, communication_allowed=True):
     }
 
 
+def _can_execute(path):
+    """Check if a binary can actually be executed (not just exist)."""
+    if not path.exists():
+        return False
+    try:
+        subprocess.run([str(path), "version"], capture_output=True, timeout=5)
+        return True
+    except (PermissionError, OSError, subprocess.TimeoutExpired):
+        return False
+
+
 def run_c_pipeline(fixture_name):
     """Run the C pipeline on a fixture and return semantic outputs."""
-    if not C_BINARY.exists():
-        pytest.skip("C binary not found — run gcc first")
+    if not _can_execute(C_BINARY):
+        pytest.skip("C binary not executable on this platform")
 
     result = subprocess.run(
         [str(C_BINARY), "verify", str(FIXTURES_DIR / fixture_name)],
