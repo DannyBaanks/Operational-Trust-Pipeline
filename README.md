@@ -247,6 +247,100 @@ py -m otp.cli verify ./evidence/<execution_id>.json
 py -m otp.cli ledger verify ./evidence/ledger.jsonl
 ```
 
+## OTP Portable (C89)
+
+**FEATURES MAY DEGRADE. SEMANTICS MUST NOT.**
+
+A minimal C89 implementation of the core pipeline. Compiles with any C compiler on any machine — no Python, no pip, no Qt, no Google.
+
+```
+OTP Rich Host                    OTP Portable
+Python + Qt + Drive + XLSX        C89 / CLI / headless
+        │                                  │
+        │          mismo contrato          │
+        ▼                                  ▼
+   OperationalEvent                OperationalEvent
+   Lease                           Lease
+   Finding                         Finding
+   Sentinel verdict                Sentinel verdict
+   ActionRequest                   ActionRequest
+   ActionResult                    ActionResult
+   Evidence receipt                Evidence receipt
+```
+
+### Build
+
+```bash
+# Any C compiler works
+cc -O2 -o otp otp_portable.c        # gcc/clang/tcc
+cl /Fe:otp.exe otp_portable.c       # MSVC
+make                                 # Makefile
+
+# Feature flags
+cc -DOTP_HAVE_SOCKETS=1 -o otp otp_portable.c    # enable LAN
+cc -DOTP_HAVE_SQLITE=1 -o otp otp_portable.c     # enable SQLite
+```
+
+### Usage
+
+```bash
+./otp doctor              # feature discovery
+./otp version             # show version
+./otp run dispatch.csv    # process CSV, output receipts
+```
+
+### Doctor Output
+
+```
+OTP Portable 0.1.0 (C89)
+========================================
+
+Compiler ........ C89 compatible
+Filesystem ...... YES
+SQLite .......... NO
+Sockets ......... NO
+TLS ............. NO
+GUI ............. NO
+
+Profile:
+  OTP PORTABLE / HEADLESS
+
+Available:
+  [PASS] local pipeline
+  [PASS] evidence files
+  [DENY] LAN plain transport
+  [DENY] Google Drive
+  [DENY] desktop GUI
+  [DENY] XLSX workbook (use CSV)
+```
+
+### Profile Comparison
+
+| Feature | OTP Rich Host | OTP Portable |
+|---|---|---|
+| Python | Yes | No |
+| C compiler | No | Yes |
+| GUI (PySide6) | Optional | No |
+| Google Drive | Optional | No |
+| XLSX workbook | Yes | CSV only |
+| SQLite persistence | Yes | Optional |
+| LAN transport | Yes | Optional |
+| Evidence receipts | Yes | Yes |
+| Domain parity | Reference | Identical semantics |
+
+### Files
+
+```
+otp_portable/
+├── otp_portable.h       # Header: structs, enums, declarations
+├── otp_portable.c       # Single-file implementation (~900 lines)
+├── Makefile             # Cross-platform build
+├── run_tests.sh         # Unix test script
+├── run_tests.bat        # Windows test script
+└── test_fixtures/       # CSV fixtures for testing
+    └── dispatch.csv
+```
+
 ## Roadmap
 
 - [x] Core pipeline (normalize → evaluate → lease → sentinel → action → channel → receipt)
@@ -257,7 +351,9 @@ py -m otp.cli ledger verify ./evidence/ledger.jsonl
 - [x] Persistence layer (SQLite WAL, crash recovery, lifecycle phases)
 - [x] GUI control room (PySide6)
 - [x] Ephemeral mode for tests
+- [x] OTP Portable (C89 single-file, domain parity)
 - [ ] CALL-E integration (optional, not a dependency)
+- [ ] Shared test fixtures (Python ↔ C domain parity verification)
 
 ## License
 
