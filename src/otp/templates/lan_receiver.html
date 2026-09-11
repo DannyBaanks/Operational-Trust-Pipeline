@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OTP Alert</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, system-ui, sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; }
+  h1 { font-size: 18px; margin-bottom: 16px; color: #f0883e; }
+  .field { margin-bottom: 12px; }
+  .label { font-size: 11px; text-transform: uppercase; color: #8b949e; letter-spacing: 0.5px; }
+  .value { font-size: 14px; margin-top: 2px; word-break: break-word; }
+  .actions { display: flex; gap: 10px; margin-top: 20px; }
+  button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .ack { background: #238636; color: #fff; }
+  .ack:active { background: #2ea043; }
+  .rej { background: #30363d; color: #8b949e; }
+  .rej:active { background: #484f58; }
+  .done { text-align: center; padding: 32px 0; color: #3fb950; font-size: 16px; font-weight: 600; }
+  .idle { text-align: center; padding: 32px 0; color: #8b949e; }
+  .note { width: 100%; padding: 10px; margin-top: 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; color: #e6edf3; font-size: 13px; resize: none; }
+  #severity { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+  .sev-high { background: #da3633; color: #fff; }
+  .sev-info { background: #1f6feb; color: #fff; }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="idle" id="idle">Waiting for alert...</div>
+  <div id="alert" style="display:none">
+    <h1>Operational Alert</h1>
+    <div class="field"><div class="label">Severity</div><div class="value" id="severity"></div></div>
+    <div class="field"><div class="label">Reason</div><div class="value" id="reason"></div></div>
+    <div class="field"><div class="label">Subject</div><div class="value" id="subject"></div></div>
+    <div class="field"><div class="label">Source</div><div class="value" id="source"></div></div>
+    <textarea class="note" id="note" rows="2" placeholder="Optional note..."></textarea>
+    <div class="actions">
+      <button class="ack" onclick="respond(true)">ACKNOWLEDGE</button>
+      <button class="rej" onclick="respond(false)">CAN'T RESPOND</button>
+    </div>
+  </div>
+  <div class="done" id="done" style="display:none"></div>
+</div>
+<script>
+const params = new URLSearchParams(window.location.search);
+const TOKEN = params.get('token') || '';
+const HEADERS = {'Content-Type': 'application/json', 'X-Session-Token': TOKEN};
+let currentRequestId = null;
+
+async function poll() {
+  try {
+    const r = await fetch('/api/poll', {headers: HEADERS});
+    if (!r.ok) { setTimeout(poll, 3000); return; }
+    const d = await r.json();
+    if (d.ok && d.request) {
+      currentRequestId = d.request.request_id;
+      const p = d.request.payload;
+      document.getElementById('idle').style.display = 'none';
+      document.getElementById('alert').style.display = 'block';
+      document.getElementById('reason').textContent = p.reason || '—';
+      document.getElementById('subject').textContent = p.subject_ref || '—';
+      document.getElementById('source').textContent = p.source_adapter || '—';
+      const sev = document.getElementById('severity');
+      sev.textContent = p.severity || '—';
+      sev.className = p.severity === 'HIGH' ? 'sev-high' : 'sev-info';
+    } else {
+      setTimeout(poll, 2000);
+    }
+  } catch(e) { setTimeout(poll, 3000); }
+}
+
+async function respond(ack) {
+  const note = document.getElementById('note').value;
+  document.getElementById('alert').style.display = 'none';
+  document.getElementById('done').style.display = 'block';
+  document.getElementById('done').textContent = ack ? 'Acknowledged' : 'Response sent';
+  await fetch('/api/respond', {method: 'POST', headers: HEADERS, body: JSON.stringify({
+    request_id: currentRequestId, acknowledged: ack, message: note
+  })});
+}
+
+poll();
+</script>
+</body>
+</html>

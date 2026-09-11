@@ -72,6 +72,78 @@ class AnsweredChannel:
 
 # --- Original tests (14) ---
 
+class ProviderUnavailableChannel:
+    """Simulates provider concurrency blocked (us/all line busy, no task submitted)."""
+    identity = "unavailable-channel/1"
+    def send(self, request):
+        return ActionResult(
+            action_id=request.action_id,
+            provider="calle-channel/1",
+            provider_ref=None,
+            status=ActionStatus.PROVIDER_UNAVAILABLE,
+            acknowledged=False,
+            response=None,
+            started_at=None,
+            completed_at=None,
+            error_code="account_concurrency_exceeded",
+            evidence_refs=(),
+            provider_accepted=False,
+            delivery="NOT_DEMONSTRATED",
+            reached_ringing="UNKNOWN",
+            terminal_cause="CONCURRENCY_BLOCKED",
+            retry_safe="UNKNOWN",
+        )
+
+
+class NoEvidenceChannel:
+    """Simulates a provider that accepted but returned zero delivery evidence.
+    Not blocked, not failed — just no signal at all."""
+    identity = "no-evidence-channel/1"
+    def send(self, request):
+        return ActionResult(
+            action_id=request.action_id,
+            provider="calle-channel/1",
+            provider_ref="mock-no-evidence",
+            status=ActionStatus.FAILED,
+            acknowledged=False,
+            response=None,
+            started_at="2026-09-10T15:15:00Z",
+            completed_at="2026-09-10T15:15:05Z",
+            error_code=None,
+            evidence_refs=(),
+            provider_accepted=True,
+            delivery="UNKNOWN",
+            reached_ringing="UNKNOWN",
+            terminal_cause="UNKNOWN",
+            retry_safe="UNKNOWN",
+        )
+
+
+class TransportFailureChannel:
+    """Simulates complete transport failure — provider never responded."""
+    identity = "transport-fail-channel/1"
+    def send(self, request):
+        return ActionResult(
+            action_id=request.action_id,
+            provider="calle-channel/1",
+            provider_ref=None,
+            status=ActionStatus.FAILED,
+            acknowledged=False,
+            response=None,
+            started_at=None,
+            completed_at=None,
+            error_code="TRANSPORT_ERROR",
+            evidence_refs=(),
+            provider_accepted=False,
+            delivery="NOT_DEMONSTRATED",
+            reached_ringing="UNKNOWN",
+            terminal_cause="TRANSPORT_ERROR",
+            retry_safe="UNKNOWN",
+        )
+
+
+# --- Original tests (14) ---
+
 def test_canonical_event_and_execution_are_deterministic():
     assert event() == event()
     assert run()["execution_id"] == run()["execution_id"]
@@ -206,6 +278,57 @@ def test_calle_offline_delivery_is_not_demonstrated():
     assert result.delivery == "NOT_DEMONSTRATED"
     assert result.recipient_acknowledged() is False
     assert result.provider_accepted is False
+
+
+# --- Provider boundary regression tests (5) ---
+
+def test_provider_concurrency_blocked_does_not_satisfy_lease():
+    """Provider blocked (concurrency limit) — lease stays OPEN/EXPIRED, not SATISFIED."""
+    outcome = run_ack_lease(event(), FixedClock("2026-09-10T08:16:00Z"), ProviderUnavailableChannel(),
+                            {"communication_allowed": True, "channel": "unavailable"})
+    assert outcome["result"].status is ActionStatus.PROVIDER_UNAVAILABLE
+    assert outcome["result"].provider_accepted is False
+    assert outcome["result"].delivery == "NOT_DEMONSTRATED"
+    assert outcome["result"].terminal_cause == "CONCURRENCY_BLOCKED"
+    assert outcome["result"].recipient_acknowledged() is False
+    assert outcome["lease"].state is LeaseState.EXPIRED
+
+def test_provider_concurrency_blocked_result_classified():
+    """ProviderUnavailableChannel result has correct boundary classification."""
+    result = ProviderUnavailableChannel().send(run()["action"])
+    assert result.status is ActionStatus.PROVIDER_UNAVAILABLE
+    assert result.provider_accepted is False
+    assert result.delivery == "NOT_DEMONSTRATED"
+    assert result.error_code == "account_concurrency_exceeded"
+    assert result.recipient_acknowledged() is False
+
+def test_missing_delivery_evidence_is_unknown_not_negative():
+    """Provider accepted but returned zero delivery evidence — UNKNOWN, not NEGATIVE."""
+    result = NoEvidenceChannel().send(run()["action"])
+    assert result.provider_accepted is True
+    assert result.delivery == "UNKNOWN"
+    assert result.reached_ringing == "UNKNOWN"
+    assert result.terminal_cause == "UNKNOWN"
+    assert result.recipient_acknowledged() is False
+
+def test_missing_evidence_does_not_satisfy_lease():
+    """No delivery evidence: lease must not transition to SATISFIED."""
+    outcome = run_ack_lease(event(), FixedClock("2026-09-10T08:16:00Z"), NoEvidenceChannel(),
+                            {"communication_allowed": True, "channel": "no-evidence"})
+    assert outcome["result"].delivery == "UNKNOWN"
+    assert outcome["lease"].state is LeaseState.EXPIRED
+    assert outcome["lease"].resolution is None
+
+def test_transport_failure_produces_not_demonstrated():
+    """Complete transport failure — provider never responded, NOT_DEMONSTRATED."""
+    outcome = run_ack_lease(event(), FixedClock("2026-09-10T08:16:00Z"), TransportFailureChannel(),
+                            {"communication_allowed": True, "channel": "transport-fail"})
+    assert outcome["result"].status is ActionStatus.FAILED
+    assert outcome["result"].provider_accepted is False
+    assert outcome["result"].delivery == "NOT_DEMONSTRATED"
+    assert outcome["result"].terminal_cause == "TRANSPORT_ERROR"
+    assert outcome["result"].recipient_acknowledged() is False
+    assert outcome["lease"].state is LeaseState.EXPIRED
 
 
 import pytest

@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import time
+import urllib.request
+import urllib.error
 
 from .canonical import stable_id
 from .domain import ActionRequest, ActionResult, ActionStatus
@@ -81,3 +85,92 @@ class CalleChannel:
             provider_accepted=True, delivery="UNKNOWN", reached_ringing="UNKNOWN",
             terminal_cause=result.status.value, retry_safe="UNKNOWN",
         )
+
+
+class LanChannel:
+    """Local-network transport for the OTP demo.
+
+    Sends a structured ActionRequest to a local relay server, which displays
+    it on a web page. The human taps ACK or REJECT. The response is polled
+    and returned as an ActionResult.
+
+    Security: session token required, no shell, no arbitrary code, no
+    filesystem authority. The web page is a minimal single-purpose receiver.
+    """
+    identity = "lan-channel/1"
+
+    def __init__(self, relay_url: str, token: str, *, timeout: float = 300.0, poll_interval: float = 2.0) -> None:
+        self.relay_url = relay_url.rstrip("/")
+        self.token = token
+        self.timeout = timeout
+        self.poll_interval = poll_interval
+
+    def send(self, request: ActionRequest) -> ActionResult:
+        sent_at = time.time()
+        payload = {
+            "request_id": request.action_id,
+            "reason": request.objective,
+            "subject_ref": request.target_ref,
+            "severity": request.urgency,
+            "source_adapter": request.channel,
+        }
+
+        # Inject into relay store
+        inject_body = json.dumps({"request_id": request.action_id, "payload": payload}).encode()
+        req = urllib.request.Request(
+            f"{self.relay_url}/api/inject",
+            data=inject_body,
+            headers={"Content-Type": "application/json", "X-Session-Token": self.token},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                if resp.status != 200:
+                    return ActionResult(request.action_id, self.identity, None,
+                                        ActionStatus.PROVIDER_UNAVAILABLE, False,
+                                        None, None, None, "RELAY_INJECT_FAILED", (),
+                                        provider_accepted=False, delivery="NOT_DEMONSTRATED",
+                                        reached_ringing="UNKNOWN", terminal_cause="RELAY_ERROR",
+                                        retry_safe="UNKNOWN")
+        except (urllib.error.URLError, OSError):
+            return ActionResult(request.action_id, self.identity, None,
+                                ActionStatus.PROVIDER_UNAVAILABLE, False,
+                                None, None, None, "RELAY_UNREACHABLE", (),
+                                provider_accepted=False, delivery="NOT_DEMONSTRATED",
+                                reached_ringing="UNKNOWN", terminal_cause="TRANSPORT_ERROR",
+                                retry_safe="UNKNOWN")
+
+        # Poll for human response
+        deadline = sent_at + self.timeout
+        while time.time() < deadline:
+            try:
+                poll_req = urllib.request.Request(
+                    f"{self.relay_url}/api/status/{request.action_id}",
+                    headers={"X-Session-Token": self.token},
+                )
+                with urllib.request.urlopen(poll_req, timeout=5) as resp:
+                    data = json.loads(resp.read())
+                    if data.get("responded"):
+                        r = data["response"]
+                        return ActionResult(
+                            request.action_id, self.identity, None,
+                            ActionStatus.ACKNOWLEDGED if r["acknowledged"] else ActionStatus.REJECTED,
+                            r["acknowledged"], r.get("message"), None,
+                            time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(r["received_at"])),
+                            None, (),
+                            provider_accepted=True,
+                            delivery="KNOWN" if r["acknowledged"] else "UNKNOWN",
+                            reached_ringing="TRUE",
+                            terminal_cause="ACKNOWLEDGED" if r["acknowledged"] else "REJECTED",
+                            retry_safe="FALSE" if r["acknowledged"] else "UNKNOWN",
+                        )
+            except (urllib.error.URLError, OSError):
+                pass
+            time.sleep(self.poll_interval)
+
+        return ActionResult(request.action_id, self.identity, None,
+                            ActionStatus.FAILED, False,
+                            None, None, None, "HUMAN_TIMEOUT", (),
+                            provider_accepted=True, delivery="UNKNOWN",
+                            reached_ringing="UNKNOWN", terminal_cause="TIMEOUT",
+                            retry_safe="UNKNOWN")
