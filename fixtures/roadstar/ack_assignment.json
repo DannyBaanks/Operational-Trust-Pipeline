@@ -1,0 +1,9 @@
+{
+  "assignment_id": "RS-ASSIGN-1001",
+  "trip_id": "RS-TRIP-77",
+  "driver_ref": "driver-42",
+  "assigned_at": "2026-09-10T08:00:00Z",
+  "ack_due_at": "2026-09-10T08:15:00Z",
+  "acknowledged_at": null,
+  "contact_ref": "driver-42"
+}

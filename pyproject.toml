@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "operational-trust-pipeline"
+version = "0.1.0"
+description = "Provider-agnostic bounded operational action requests with verifiable evidence."
+requires-python = ">=3.11"
+
+[project.scripts]
+otp = "otp.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
