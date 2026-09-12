@@ -116,6 +116,7 @@ HAS_DISPLAY = sys.platform == "win32" or os.environ.get("DISPLAY") is not None
 pytestmark_display = pytest.mark.skipif(not HAS_DISPLAY, reason="No display server")
 
 
+@pytest.mark.skipif(not HAS_PYSIDE, reason="PySide6 not installed")
 @pytestmark_display
 class TestWidgetSmoke:
     def _app(self):

@@ -19,8 +19,13 @@ def client():
     return app.test_client()
 
 
-def test_dispatch_page_renders(client):
+def test_dispatch_page_requires_token(client):
     r = client.get("/dispatch")
+    assert r.status_code == 401
+
+
+def test_dispatch_page_renders(client):
+    r = client.get("/dispatch?token=test-token-123")
     assert r.status_code == 200
     assert b"RoadStar Dispatch" in r.data
     assert b"leaflet" in r.data.lower()

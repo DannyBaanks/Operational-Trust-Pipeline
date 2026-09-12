@@ -17,7 +17,9 @@ import time
 import uuid
 from typing import Any
 
-from flask import Flask, request as flask_request, jsonify, render_template
+# flask is an optional integration dependency: imported lazily inside
+# create_app() so `import otp.lan_relay` (and transitively `otp.cli`) works
+# in a base install. pip install operational-trust-pipeline[lan]
 
 # In-memory stores. Valid only for the lifetime of the relay process.
 _pending: list[dict[str, Any]] = []
@@ -27,20 +29,35 @@ _store_lock = threading.Lock()
 _session_token: str = ""
 
 
-def _auth_ok() -> bool:
-    token = flask_request.headers.get("X-Session-Token", "")
-    return token == _session_token
+def create_app():
+    """Build the Flask app. Requires the optional [lan] extra (flask)."""
+    try:
+        from flask import Flask, jsonify, render_template, request as flask_request
+    except ImportError as exc:
+        raise ModuleNotFoundError(
+            "otp LAN relay requires flask. "
+            "Install with: pip install operational-trust-pipeline[lan]"
+        ) from exc
 
+    def _auth_ok() -> bool:
+        token = flask_request.headers.get("X-Session-Token", "")
+        return token == _session_token
 
-def create_app() -> Flask:
+    def _page_auth_ok() -> bool:
+        return flask_request.args.get("token", "") == _session_token
+
     app = Flask(__name__, template_folder="templates")
 
     @app.route("/receiver", methods=["GET"])
     def receiver_page():
+        if not _page_auth_ok():
+            return jsonify({"error": "unauthorized"}), 401
         return render_template("lan_receiver.html")
 
     @app.route("/dispatch", methods=["GET"])
     def dispatch_page():
+        if not _page_auth_ok():
+            return jsonify({"error": "unauthorized"}), 401
         return render_template("dispatch_map.html")
 
     @app.route("/api/scenario", methods=["GET"])
@@ -129,8 +146,13 @@ def get_response(request_id: str) -> dict[str, Any] | None:
         return _responses.pop(request_id, None)
 
 
-def start_relay(host: str = "0.0.0.0", port: int = 8787) -> tuple[str, int, str]:
-    """Start the Flask relay in a daemon thread. Returns (host, port, token)."""
+def start_relay(host: str = "127.0.0.1", port: int = 8787) -> tuple[str, int, str]:
+    """Start the Flask relay in a daemon thread. Returns (host, port, token).
+
+    Defaults to loopback so a relay is never exposed to the network
+    unintentionally. Callers that need LAN exposure (the phone demo)
+    opt in explicitly with host="0.0.0.0".
+    """
     global _session_token
     _session_token = str(uuid.uuid4())
     app = create_app()

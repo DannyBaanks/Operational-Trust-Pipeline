@@ -11,8 +11,14 @@ RoadStar data → normalize → evaluate → lease/policy → Sentinel → actio
 ## Quick Start
 
 ```bash
-# Run tests (156 passed, 1 skipped locally)
-py -m pytest -q
+# Full test environment (core + LAN + GUI + Drive extras)
+pip install -e ".[all,dev-gui]"
+py -m pytest -q          # full env: 158 passed, 1 skipped (live CALL-E)
+
+# Core-only install also works:
+pip install -e ".[dev]"
+py -m otp.cli demo ack-lease        # no flask required for mock channel
+py -m pytest -q                     # optional-suites skip, core passes
 
 # Deterministic demo (mock channel, no network, persists to ~/.otp/otp.db)
 py -m otp.cli demo ack-lease
@@ -23,7 +29,8 @@ py -m otp.cli demo ack-lease --ephemeral
 # GUI control room (requires PySide6)
 otp gui
 
-# CLI with LAN channel (opens relay on :8787)
+# CLI with LAN channel (requires flask: pip install -e ".[lan]";
+# explicit LAN exposure — binds 0.0.0.0:8787 by design, token-gated UI+API)
 py -m otp.cli demo ack-lease --channel lan
 
 # Google Drive sync
@@ -160,7 +167,7 @@ otp drive disconnect    # remove token
 | Channel | Status | Use case |
 |---|---|---|
 | MockChannel | **Active** | Deterministic demo, tests |
-| LanChannel | **Active** | Local network demo (Flask relay + web page) |
+| LanChannel | **Active** (`[lan]` extra) | Local network demo (Flask relay + token-gated web page) |
 | CalleChannel | Optional | CALL-E telephony (live=False by default) |
 | Google Drive | **Active** | Evidence persistence (OAuth2, user's own Drive) |
 
@@ -220,7 +227,8 @@ src/otp/
 ## Tests
 
 ```bash
-py -m pytest -q          # local result: 156 passed, 1 skipped
+py -m pytest -q          # full env: 159 passed, 1 skipped (live CALL-E)
+                         # base .[dev]: 119 passed, 20 skipped (optional suites skip)
 py -m pytest -v          # verbose
 py -m pytest -k gui      # GUI unit tests only
 py -m pytest -k drive    # Drive sync tests (mocked)

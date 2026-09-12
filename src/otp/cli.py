@@ -8,11 +8,18 @@ from pathlib import Path
 from .channels import CalleChannel, LanChannel, MockChannel
 from .canonical import plain
 from .evidence import append_ledger, make_receipt, verify_ledger, verify_receipt
-from .lan_relay import start_relay
 from .pipeline import FixedClock, run_ack_lease
 from .roadstar import RoadStarAdapter
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _lan_available() -> bool:
+    try:
+        import flask  # noqa: F401
+        return True
+    except ImportError:
+        return False
 
 
 def demo(channel: str = "mock", relay_url: str | None = None, relay_token: str | None = None,
@@ -24,7 +31,17 @@ def demo(channel: str = "mock", relay_url: str | None = None, relay_token: str |
     ctx = {"communication_allowed": True, "channel": channel}
 
     if channel == "lan":
-        url, port, token = start_relay()
+        # LAN exposure is an explicit user choice: bind all interfaces here.
+        # flask is an optional dependency ([lan] extra), imported lazily so a
+        # base install can still run the CLI.
+        try:
+            from .lan_relay import start_relay
+            url, port, token = start_relay(host="0.0.0.0")
+        except ModuleNotFoundError as exc:
+            raise SystemExit(
+                "LAN channel requires flask. "
+                "Install with: pip install operational-trust-pipeline[lan]"
+            ) from exc
         actual_url = relay_url or f"http://127.0.0.1:{port}"
         actual_token = relay_token or token
         ch = LanChannel(actual_url, actual_token)
@@ -89,7 +106,7 @@ def main() -> int:
             "calle_package_available": CalleChannel.available(),
             "calle_credentials_available": bool(os.getenv("CALLE_API_KEY")),
             "live_calling": "disabled",
-            "lan_channel_available": True,
+            "lan_channel_available": _lan_available(),
             "evidence_directory_writable": True,
             "schema": "operational-event/1",
         }, sort_keys=True))
@@ -183,11 +200,17 @@ def main() -> int:
             ds.disconnect()
             print(json.dumps({"disconnected": True}))
             return 0
-    data = json.loads(Path(args.receipt).read_text())
+    try:
+        data = json.loads(Path(args.receipt).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"cannot read receipt: {exc}")
+        return 1
+    if not isinstance(data, dict) or "receipt_sha256" not in data:
+        print("invalid receipt: missing receipt_sha256")
+        return 1
     ok, reason = verify_receipt(data)
     print(reason)
     return 0 if ok else 1
-    return 1
 
 
 if __name__ == "__main__":

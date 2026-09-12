@@ -136,8 +136,13 @@ def test_reject_response(client):
 # Relay: web page serves
 # ---------------------------------------------------------------------------
 
-def test_receiver_page_renders(client):
+def test_receiver_page_requires_token(client):
     r = client.get("/receiver")
+    assert r.status_code == 401
+
+
+def test_receiver_page_renders(client):
+    r = client.get("/receiver?token=test-token-123")
     assert r.status_code == 200
     assert b"Operational Alert" in r.data
 

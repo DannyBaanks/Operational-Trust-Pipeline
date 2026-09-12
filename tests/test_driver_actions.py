@@ -23,8 +23,13 @@ def auth():
     return {"X-Session-Token": "test-token-123"}
 
 
-def test_receiver_page_has_duty_actions(client):
+def test_receiver_page_requires_token(client):
     r = client.get("/receiver")
+    assert r.status_code == 401
+
+
+def test_receiver_page_has_duty_actions(client):
+    r = client.get("/receiver?token=test-token-123")
     assert r.status_code == 200
     for label in (b"ACCEPT LOAD", b"REJECT LOAD", b"ARRIVED", b"DEPARTED", b"ACKNOWLEDGE"):
         assert label in r.data
